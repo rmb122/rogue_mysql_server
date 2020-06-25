@@ -17,20 +17,20 @@ import (
 
 type DB struct {
 	listener *mysql.Listener
-	Handler mysql.Handler
+	Handler  mysql.Handler
 
-	mapLock sync.Mutex
+	mapLock   sync.Mutex
 	fileIndex map[uint32]int
-	config Config
+	config    Config
 }
 
 type Config struct {
-	Lhost string `yaml:"lhost"`
-	Lport string `yaml:"lport"`
+	Lhost    string   `yaml:"lhost"`
+	Lport    string   `yaml:"lport"`
 	FileList []string `yaml:"filelist"`
-	Auth bool `yaml:"auth"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Auth     bool     `yaml:"auth"`
+	Username string   `yaml:"username"`
+	Password string   `yaml:"password"`
 }
 
 func NativePassword(password string) string {
@@ -50,7 +50,6 @@ func NativePassword(password string) string {
 
 	return fmt.Sprintf("*%s", s)
 }
-
 
 func main() {
 	config := Config{}
@@ -121,7 +120,9 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 		return nil
 	} else {
 		filename := db.config.FileList[db.fileIndex[c.ConnectionID]]
+		db.mapLock.Lock()
 		db.fileIndex[c.ConnectionID] = (db.fileIndex[c.ConnectionID] + 1) % length
+		db.mapLock.Unlock()
 		data := c.RequestFile(filename)
 		log.Infof("Now try to read [%s] from [%s]", filename, c.RemoteAddr())
 
@@ -131,7 +132,7 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 			path := fmt.Sprintf("./loot/%s", strings.Split(c.RemoteAddr().String(), ":")[0])
 			os.Mkdir(path, 0744)
 			filename := strings.Split(filename, "/")
-			filename = filename[len(filename) - 1:]
+			filename = filename[len(filename)-1:]
 			filepath := fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), filename[0])
 			ioutil.WriteFile(filepath, data, 0644)
 			log.Infof("Read success, stored at [%s]", filepath)
