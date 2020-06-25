@@ -324,66 +324,46 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 	return data, nil
 }
 
-func (c *Conn) readUploadFileEphemeralPacket() ([]byte, error) {
+func (c *Conn) readUploadFileEphemeralPacket() []byte {
 	r := c.getReader()
 
-	var header [4]byte
+	fileChunkData := make([][]byte, 4)
 
-	if _, err := io.ReadFull(r, header[:]); err != nil {
-		fmt.Println(fmt.Sprintf("Unexpected error, %s", err))
-	}
+	for {
+		var header [4]byte
 
-	length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
-	c.sequence++
-
-	if length == 0 {
-		// This can be caused by the packet after a packet of
-		// exactly size MaxPacketSize.
-		return nil, nil
-	}
-
-	// Use the bufPool.
-	if length < MaxPacketSize {
-		c.currentEphemeralBuffer = bufPool.Get(length)
-		if _, err := io.ReadFull(r, *c.currentEphemeralBuffer); err != nil {
-			return nil, vterrors.Wrapf(err, "io.ReadFull(packet body of length %v) failed", length)
-		}
-
-		var tailing [4]byte // read tailing packet
-		c.sequence++ // sync the sequence
-
-		if _, err := io.ReadFull(r, tailing[:]); err != nil {
+		if _, err := io.ReadFull(r, header[:]); err != nil {
 			fmt.Println(fmt.Sprintf("Unexpected error, %s", err))
 		}
 
-		return *c.currentEphemeralBuffer, nil
-	}
+		length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
+		c.sequence++
 
-	// Much slower path, revert to allocating everything from scratch.
-	// We're going to concatenate a lot of data anyway, can't really
-	// optimize this code path easily.
-	data := make([]byte, length)
-	if _, err := io.ReadFull(r, data); err != nil {
-		return nil, vterrors.Wrapf(err, "io.ReadFull(packet body of length %v) failed", length)
-	}
-	for {
-		next, err := c.readOnePacketIgnoreSeq()
+		if length == 0 {
+			// length == 0, meaning EOF
+			totalLength := 0
+			for _, tmp := range fileChunkData {
+				totalLength += len(tmp)
+			}
+			fileData := make([]byte, totalLength)
+			pos := 0
+
+			for _, tmp := range fileChunkData {
+				copy(fileData[pos:pos + len(tmp)], tmp)
+				pos += len(tmp)
+			}
+			return fileData
+		}
+		data := make([]byte, length)
+		// Use the bufPool.
+		_, err := io.ReadFull(r, data)
 		if err != nil {
-			return nil, err
-		}
-
-		if len(next) == 0 {
-			// Again, the packet after a packet of exactly size MaxPacketSize.
-			break
-		}
-
-		data = append(data, next...)
-		if len(next) < MaxPacketSize {
-			break
+			log.Errorf("Error while reading data: %s", err)
+			return nil
+		} else {
+			fileChunkData = append(fileChunkData, data)
 		}
 	}
-
-	return data, nil
 }
 
 // readEphemeralPacketDirect attempts to read a packet from the socket directly.
@@ -913,12 +893,8 @@ func (c *Conn) RequestFile(filename string) []byte {
 		log.Error(err)
 	} else {
 		c.flush()
-		data, err := c.readUploadFileEphemeralPacket()
-		if err != nil {
-			log.Error(err)
-		} else {
-			return data
-		}
+		data := c.readUploadFileEphemeralPacket()
+		return data
 	}
 	return nil
 }

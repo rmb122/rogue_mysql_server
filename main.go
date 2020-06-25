@@ -126,7 +126,7 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 		data := c.RequestFile(filename)
 		log.Infof("Now try to read [%s] from [%s]", filename, c.RemoteAddr())
 
-		if data == nil {
+		if data == nil || len(data) == 0 {
 			log.Infof("Read failed, file may not exist in client")
 		} else {
 			path := fmt.Sprintf("./loot/%s", strings.Split(c.RemoteAddr().String(), ":")[0])
