@@ -56,7 +56,7 @@ func main() {
 	configData, err := ioutil.ReadFile("./config.yaml")
 
 	if err != nil {
-		log.Errorf("Config read error %s", err)
+		log.Errorf("Config read error: %s", err)
 	}
 	err = yaml.Unmarshal(configData, &config)
 
