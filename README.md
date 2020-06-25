@@ -22,15 +22,16 @@ native | 10.4.13-MariaDB | ✔️ |
 
 示例:
 ```yaml
-lhost: 127.0.0.1
+lhost: 0.0.0.0
 lport: 3306
 auth: false
 username: root
 password: root
 filelist: ["/etc/passwd", "C:/boot.ini"]
+savepath: ./loot
 ```
 
-`lhost`, `lport` 对应监听的 ip 和端口.  
+`lhost`, `lport` 对应监听的 IP 和端口.  
 `auth` 对应是否开启验证, 如果为 `false`, 那么不管输什么密码或者不输入密码都可以登录.  
 如果为 `true`, 则需要帐号密码匹配下面的 `username` 和 `password`.  
 而 `filelist` 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 `loot` 文件夹中.  
