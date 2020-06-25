@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"rouge_mysql_server/mysql"
+	"rogue_mysql_server/mysql"
 	"strings"
 	"sync"
 	"time"

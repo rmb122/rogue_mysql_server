@@ -1,4 +1,4 @@
-# Rouge Mysql Server
+# Rogue Mysql Server
 
 基于 https://github.com/vitessio/vitess 实现的恶意 mysql 服务器, 支持 go, php, python, java, 原生命令行等多种语言的多种库下的恶意 mysql 客户端.  
 远离恼人的兼容性问题, 可以定制需要读取的文件等, 测试过的客户端见下表  
@@ -22,10 +22,11 @@ username: root
 password: root
 filelist: ["/etc/passwd", "C:/boot.ini"]
 ```
-lhost, lport 对应监听的端口和 ip.  
-auth 对应是否开启验证, 如果为 false, 那么不管输什么密码或者不输入密码都可以登录.  
-如果为 true, 则需要帐号密码匹配下面的 username 和 password.  
-而 filelist 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 ./loot 中.  
+
+`lhost`, `lport` 对应监听的 ip 和端口.  
+`auth` 对应是否开启验证, 如果为 `false`, 那么不管输什么密码或者不输入密码都可以登录.  
+如果为 `true`, 则需要帐号密码匹配下面的 `username` 和 `password`.  
+而 `filelist` 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 `loot` 文件夹中.  
 
 ## Ref
 

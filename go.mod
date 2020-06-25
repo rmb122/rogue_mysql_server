@@ -1,4 +1,4 @@
-module rouge_mysql_server
+module rogue_mysql_server
 
 go 1.14
 
