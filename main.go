@@ -90,6 +90,7 @@ func main() {
 		log.Errorf("NewListener failed: %s", err)
 	}
 
+	log.Infof("Server started at [%s:%s]", config.Lhost, config.Lport)
 	db.listener.Accept()
 }
 

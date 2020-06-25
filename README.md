@@ -1,7 +1,7 @@
 # Rogue Mysql Server
 
-基于 https://github.com/vitessio/vitess 实现的恶意 mysql 服务器, 支持 go, php, python, java, 原生命令行等多种语言的多种库下的恶意 mysql 客户端.  
-远离恼人的兼容性问题, 可以定制需要读取的文件等, 测试过的客户端见下表  
+基于 https://github.com/vitessio/vitess 实现的恶意 mysql 服务器, 支持 go, php, python, java, 原生命令行等多种语言下的多种库的 mysql 客户端.  
+远离恼人的兼容性问题, 测试过的客户端见下表  
 
 language | library | pass |
 ---     | --- | --- | 
@@ -10,6 +10,13 @@ php | mysqli, pdo | ✔️ |
 python | pymysql | ✔️ | 
 java | mysql-connector-java | ✔️ |
 native | 10.4.13-MariaDB | ✔️ |
+
+## 功能
+
+* 可以兼容多种 mysql 客户端
+* 可以读取二进制文件
+* 自动保存文件
+* 作为蜜罐使用时, 可选择开启帐号密码验证
 
 ## 配置文件
 

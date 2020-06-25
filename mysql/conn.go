@@ -355,7 +355,7 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
 			return fileData
 		}
 		data := make([]byte, length)
-		// Use the bufPool.
+
 		_, err := io.ReadFull(r, data)
 		if err != nil {
 			log.Errorf("Error while reading data: %s", err)
