@@ -29,6 +29,6 @@ auth 对应是否开启验证, 如果为 false, 那么不管输什么密码或�
 
 ## Ref
 
-https://github.com/vitessio/vitess
-https://github.com/src-d/go-mysql-server
-http://scz.617.cn:8/network/202001101612.txt
+https://github.com/vitessio/vitess  
+https://github.com/src-d/go-mysql-server  
+http://scz.617.cn:8/network/202001101612.txt  
