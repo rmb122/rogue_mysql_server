@@ -4,3 +4,4 @@ auth: false
 username: root
 password: root
 filelist: ["/etc/passwd", "C:/boot.ini"]
+savepath: ./loot
