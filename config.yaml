@@ -1,0 +1,6 @@
+lhost: 0.0.0.0
+lport: 3306
+auth: false
+username: root
+password: root
+filelist: ["/etc/passwd", "C:/boot.ini"]
