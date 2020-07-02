@@ -29,10 +29,9 @@ type Config struct {
 	Lhost    string   `yaml:"lhost"`
 	Lport    string   `yaml:"lport"`
 	FileList []string `yaml:"filelist"`
-	Auth     bool     `yaml:"auth"`
-	Username string   `yaml:"username"`
-	Password string   `yaml:"password"`
 	Savepath string   `yaml:"savepath"`
+	Auth     bool     `yaml:"auth"`
+	Users []map[string]string `yaml:"users"`
 }
 
 func NativePassword(password string) string {
@@ -60,11 +59,13 @@ func main() {
 
 	if err != nil {
 		log.Errorf("Config read error: %s", err)
+		os.Exit(-1)
 	}
 	err = yaml.Unmarshal(configData, &config)
 
 	if err != nil {
 		log.Errorf("Config parse error: %s", err)
+		os.Exit(-1)
 	}
 
 	db := &DB{}
@@ -74,15 +75,28 @@ func main() {
 
 	var authServer mysql.AuthServer
 	if config.Auth {
-		config.Password = NativePassword(config.Password)
-
 		authServerStatic := mysql.NewAuthServerStatic()
-		authServerStatic.Entries[config.Username] = []*mysql.AuthServerStaticEntry{
-			{
-				MysqlNativePassword: config.Password,
-				Password:            config.Password,
-			},
+
+		for _, user := range config.Users {
+			for username, password := range user {
+				password = NativePassword(password)
+
+				if authServerStatic.Entries[username] == nil {
+					authServerStatic.Entries[username] = []*mysql.AuthServerStaticEntry{
+						{
+							MysqlNativePassword: password,
+							Password: 			 password,
+						},
+					}
+				} else {
+					authServerStatic.Entries[username] = append(authServerStatic.Entries[username], &mysql.AuthServerStaticEntry{
+						MysqlNativePassword: password,
+						Password: 			 password,
+					})
+				}
+			}
 		}
+
 		authServer = authServerStatic
 	} else {
 		authServer = &mysql.AuthServerNone{}
@@ -91,6 +105,7 @@ func main() {
 	db.listener, err = mysql.NewListener("tcp", fmt.Sprintf("%s:%s", config.Lhost, config.Lport), authServer, db, 0, 0)
 	if err != nil {
 		log.Errorf("NewListener failed: %s", err)
+		os.Exit(-1)
 	}
 
 	log.Infof("Server started at [%s:%s]", config.Lhost, config.Lport)
