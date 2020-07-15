@@ -1,4 +1,4 @@
 .idea/
-go_build_main_go
+go_build_*
 target/
 loot

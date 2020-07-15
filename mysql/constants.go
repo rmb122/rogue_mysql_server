@@ -71,6 +71,7 @@ const (
 	// CLIENT_LOCAL_FILES 1 << 7
 	// Client can use LOCAL INFILE request of LOAD DATA|XML.
 	// We do not set it.
+	CapabilityClientLoadDataLocal = 1 << 7
 
 	// CLIENT_IGNORE_SPACE 1 << 8
 	// Parser can ignore spaces before '('.

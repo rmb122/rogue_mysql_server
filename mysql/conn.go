@@ -154,6 +154,8 @@ type Conn struct {
 	// currentEphemeralBuffer for tracking allocated temporary buffer for writes and reads respectively.
 	// It can be allocated from bufPool or heap and should be recycled in the same manner.
 	currentEphemeralBuffer *[]byte
+
+	SupportLoadDataLocal bool
 }
 
 // bufPool is used to allocate and free buffers in an efficient way.

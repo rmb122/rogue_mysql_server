@@ -22,20 +22,24 @@ native | 10.4.13-MariaDB | ✔️ |
 
 示例:
 ```yaml
-lhost: 0.0.0.0
-lport: 3306
-filelist: ["/etc/passwd", "C:/boot.ini"]
-savepath: ./loot
+host: 0.0.0.0
+port: 3306
+file_list: ["/etc/passwd", "C:/boot.ini"]
+save_path: ./loot
 auth: true
+always_read: false
 users:
   - root: root
   - root: password
+
 ```
 
-`lhost`, `lport` 对应监听的 IP 和端口.  
+`host`, `port` 对应监听的 IP 和端口.  
 `auth` 对应是否开启验证, 如果为 `false`, 那么不管输什么密码或者不输入密码都可以登录.  
 如果为 `true`, 则需要帐号密码匹配下面的设置的帐号密码中的一条.  
-而 `filelist` 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 `loot` 文件夹中.  
+而 `file_list` 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 `save_path` 文件夹中.  
+
+如果开启 `always_read`, 那么不管客户端是否标记自己支持 LOAD DATA LOCAL, 都会尝试去读取文件, 否则会根据客户端的标记来决定是否读取, 避免客户端请求不同步.  
 
 ## Ref
 

@@ -1,8 +1,9 @@
-lhost: 0.0.0.0
-lport: 3306
-filelist: ["/etc/passwd", "C:/boot.ini"]
-savepath: ./loot
+host: 0.0.0.0
+port: 3306
+file_list: ["/etc/passwd", "C:/boot.ini"]
+save_path: ./loot
 auth: true
+always_read: false
 users:
   - root: root
   - root: password

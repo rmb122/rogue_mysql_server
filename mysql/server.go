@@ -572,6 +572,13 @@ func (l *Listener) parseClientHandshakePacket(c *Conn, firstTime bool, data []by
 
 	// Client flags, 4 bytes.
 	clientFlags, pos, ok := readUint32(data, pos)
+
+	if clientFlags & CapabilityClientLoadDataLocal == 0 {
+		c.SupportLoadDataLocal = false
+	} else {
+		c.SupportLoadDataLocal = true
+	}
+
 	if !ok {
 		return "", "", nil, vterrors.Errorf(vtrpc.Code_INTERNAL, "parseClientHandshakePacket: can't read client flags")
 	}

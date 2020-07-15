@@ -26,12 +26,13 @@ type DB struct {
 }
 
 type Config struct {
-	Lhost    string   `yaml:"lhost"`
-	Lport    string   `yaml:"lport"`
-	FileList []string `yaml:"filelist"`
-	Savepath string   `yaml:"savepath"`
-	Auth     bool     `yaml:"auth"`
-	Users []map[string]string `yaml:"users"`
+	Host       string              `yaml:"host"`
+	Port       string              `yaml:"port"`
+	FileList   []string            `yaml:"file_list"`
+	SavePath   string              `yaml:"save_path"`
+	Auth       bool                `yaml:"auth"`
+	Users      []map[string]string `yaml:"users"`
+	AlwaysRead bool                `yaml:"always_read""`
 }
 
 func NativePassword(password string) string {
@@ -85,13 +86,13 @@ func main() {
 					authServerStatic.Entries[username] = []*mysql.AuthServerStaticEntry{
 						{
 							MysqlNativePassword: password,
-							Password: 			 password,
+							Password:            password,
 						},
 					}
 				} else {
 					authServerStatic.Entries[username] = append(authServerStatic.Entries[username], &mysql.AuthServerStaticEntry{
 						MysqlNativePassword: password,
-						Password: 			 password,
+						Password:            password,
 					})
 				}
 			}
@@ -102,13 +103,13 @@ func main() {
 		authServer = &mysql.AuthServerNone{}
 	}
 
-	db.listener, err = mysql.NewListener("tcp", fmt.Sprintf("%s:%s", config.Lhost, config.Lport), authServer, db, 0, 0)
+	db.listener, err = mysql.NewListener("tcp", fmt.Sprintf("%s:%s", config.Host, config.Port), authServer, db, 0, 0)
 	if err != nil {
 		log.Errorf("NewListener failed: %s", err)
 		os.Exit(-1)
 	}
 
-	log.Infof("Server started at [%s:%s]", config.Lhost, config.Lport)
+	log.Infof("Server started at [%s:%s]", config.Host, config.Port)
 	db.listener.Accept()
 }
 
@@ -136,6 +137,12 @@ func (db *DB) ConnectionClosed(c *mysql.Conn) {
 func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
 	log.Infof("Client from addr [%s], ID [%d] try to query [%s]", c.RemoteAddr(), c.ConnectionID, query)
 
+	if !c.SupportLoadDataLocal && !db.config.AlwaysRead { // 客户端不支持读取本地文件且没有开启总是读取，直接返回错误
+		log.Info("Client not support LOAD DATA LOCAL, return error directly")
+		c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))
+		return nil
+	}
+
 	length := len(db.config.FileList)
 	if length == 0 {
 		return nil
@@ -150,7 +157,7 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 		if data == nil || len(data) == 0 {
 			log.Infof("Read failed, file may not exist in client")
 		} else {
-			path := fmt.Sprintf("%s/%s", db.config.Savepath , strings.Split(c.RemoteAddr().String(), ":")[0])
+			path := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
 
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				os.MkdirAll(path, 0755)
