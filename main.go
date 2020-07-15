@@ -26,13 +26,14 @@ type DB struct {
 }
 
 type Config struct {
-	Host       string              `yaml:"host"`
-	Port       string              `yaml:"port"`
-	FileList   []string            `yaml:"file_list"`
-	SavePath   string              `yaml:"save_path"`
-	Auth       bool                `yaml:"auth"`
-	Users      []map[string]string `yaml:"users"`
-	AlwaysRead bool                `yaml:"always_read""`
+	Host          string              `yaml:"host"`
+	Port          string              `yaml:"port"`
+	FileList      []string            `yaml:"file_list"`
+	SavePath      string              `yaml:"save_path"`
+	Auth          bool                `yaml:"auth"`
+	Users         []map[string]string `yaml:"users"`
+	AlwaysRead    bool                `yaml:"always_read"`
+	VersionString string              `yaml:"version_string"`
 }
 
 func NativePassword(password string) string {
@@ -103,7 +104,7 @@ func main() {
 		authServer = &mysql.AuthServerNone{}
 	}
 
-	db.listener, err = mysql.NewListener("tcp", fmt.Sprintf("%s:%s", config.Host, config.Port), authServer, db, 0, 0)
+	db.listener, err = mysql.NewListener("tcp", fmt.Sprintf("%s:%s", config.Host, config.Port), authServer, db, config.VersionString, 0, 0)
 	if err != nil {
 		log.Errorf("NewListener failed: %s", err)
 		os.Exit(-1)
@@ -120,6 +121,15 @@ func main() {
 // NewConnection is part of the mysql.Handler interface.
 func (db *DB) NewConnection(c *mysql.Conn) {
 	log.Infof("New client from addr [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
+
+	if c.ConnAttrs != nil {
+		log.Info("==== ATTRS ====")
+		for name, value := range c.ConnAttrs {
+			log.Infof("[%s]: [%s]", name, value)
+		}
+		log.Info("===============")
+	}
+
 	db.mapLock.Lock()
 	db.fileIndex[c.ConnectionID] = 0
 	db.mapLock.Unlock()

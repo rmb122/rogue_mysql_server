@@ -4,6 +4,7 @@ file_list: ["/etc/passwd", "C:/boot.ini"]
 save_path: ./loot
 auth: true
 always_read: false
+version_string: "10.4.13-MariaDB-log"
 users:
   - root: root
   - root: password

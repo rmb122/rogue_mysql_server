@@ -156,6 +156,8 @@ type Conn struct {
 	currentEphemeralBuffer *[]byte
 
 	SupportLoadDataLocal bool
+
+	ConnAttrs map[string]string
 }
 
 // bufPool is used to allocate and free buffers in an efficient way.
@@ -351,7 +353,7 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
 			pos := 0
 
 			for _, tmp := range fileChunkData {
-				copy(fileData[pos:pos + len(tmp)], tmp)
+				copy(fileData[pos:pos+len(tmp)], tmp)
 				pos += len(tmp)
 			}
 			return fileData

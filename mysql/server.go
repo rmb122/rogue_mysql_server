@@ -34,10 +34,6 @@ import (
 )
 
 const (
-	// DefaultServerVersion is the default server version we're sending to the client.
-	// Can be changed.
-	DefaultServerVersion = "10.4.13-MariaDB-log Arch Linux"
-
 	// timing metric keys
 	connectTimingKey  = "Connect"
 	queryTimingKey    = "Query"
@@ -157,10 +153,11 @@ type Listener struct {
 }
 
 // NewFromListener creares a new mysql listener from an existing net.Listener
-func NewFromListener(l net.Listener, authServer AuthServer, handler Handler, connReadTimeout time.Duration, connWriteTimeout time.Duration) (*Listener, error) {
+func NewFromListener(l net.Listener, authServer AuthServer, handler Handler, versionString string, connReadTimeout time.Duration, connWriteTimeout time.Duration) (*Listener, error) {
 	cfg := ListenerConfig{
 		Listener:           l,
 		AuthServer:         authServer,
+		VersionString:      versionString,
 		Handler:            handler,
 		ConnReadTimeout:    connReadTimeout,
 		ConnWriteTimeout:   connWriteTimeout,
@@ -170,13 +167,13 @@ func NewFromListener(l net.Listener, authServer AuthServer, handler Handler, con
 }
 
 // NewListener creates a new Listener.
-func NewListener(protocol, address string, authServer AuthServer, handler Handler, connReadTimeout time.Duration, connWriteTimeout time.Duration) (*Listener, error) {
+func NewListener(protocol, address string, authServer AuthServer, handler Handler, versionString string, connReadTimeout time.Duration, connWriteTimeout time.Duration) (*Listener, error) {
 	listener, err := net.Listen(protocol, address)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewFromListener(listener, authServer, handler, connReadTimeout, connWriteTimeout)
+	return NewFromListener(listener, authServer, handler, versionString, connReadTimeout, connWriteTimeout)
 }
 
 // ListenerConfig should be used with NewListenerWithConfig to specify listener parameters.
@@ -184,6 +181,7 @@ type ListenerConfig struct {
 	// Protocol-Address pair and Listener are mutually exclusive parameters
 	Protocol           string
 	Address            string
+	VersionString      string
 	Listener           net.Listener
 	AuthServer         AuthServer
 	Handler            Handler
@@ -210,7 +208,7 @@ func NewListenerWithConfig(cfg ListenerConfig) (*Listener, error) {
 		authServer:         cfg.AuthServer,
 		handler:            cfg.Handler,
 		listener:           l,
-		ServerVersion:      DefaultServerVersion,
+		ServerVersion:      cfg.VersionString,
 		connectionID:       1,
 		connReadTimeout:    cfg.ConnReadTimeout,
 		connWriteTimeout:   cfg.ConnWriteTimeout,
@@ -265,10 +263,6 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 		conn.Close()
 	}()
 
-	// Tell the handler about the connection coming and going.
-	l.handler.NewConnection(c)
-	defer l.handler.ConnectionClosed(c)
-
 	// Adjust the count of open connections
 	defer connCount.Add(-1)
 
@@ -296,6 +290,10 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 		log.Errorf("Cannot parse client handshake response from %s: %v", c, err)
 		return
 	}
+
+	// Tell the handler about the connection coming and going.
+	l.handler.NewConnection(c)
+	defer l.handler.ConnectionClosed(c)
 
 	c.recycleReadPacket()
 
@@ -690,8 +688,10 @@ func (l *Listener) parseClientHandshakePacket(c *Conn, firstTime bool, data []by
 
 	// Decode connection attributes send by the client
 	if clientFlags&CapabilityClientConnAttr != 0 {
-		if _, _, err := parseConnAttrs(data, pos); err != nil {
+		if connAttrs, _, err := parseConnAttrs(data, pos); err != nil {
 			log.Warningf("Decode connection attributes send by the client: %v", err)
+		} else {
+			c.ConnAttrs = connAttrs
 		}
 	}
 
@@ -741,7 +741,6 @@ func parseConnAttrs(data []byte, pos int) (map[string]string, int, error) {
 	}
 
 	return attrs, pos, nil
-
 }
 
 // writeAuthSwitchRequest writes an auth switch request packet.
