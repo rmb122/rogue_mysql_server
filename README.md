@@ -11,12 +11,15 @@ python | pymysql | ✔️ |
 java | mysql-connector-java | ✔️ |
 native | 10.4.13-MariaDB | ✔️ |
 
+觉得好用可以点右上方的 🌟 支持作者
+
 ## 功能
 
 * 可以兼容多种 mysql 客户端
 * 可以读取二进制文件
 * 自动保存文件
 * 作为蜜罐使用时, 可选择开启帐号密码验证
+* 读取客户端的 ConnAttr, 可能会包含一些客户端的额外信息
 
 ## 配置文件
 
