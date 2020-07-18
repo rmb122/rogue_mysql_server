@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -55,6 +55,12 @@ func NativePassword(password string) string {
 }
 
 func main() {
+	formatter := new(log.TextFormatter)
+	formatter.FullTimestamp = true
+	formatter.TimestampFormat = "2006-01-02 15:04:05"
+	log.SetFormatter(formatter)
+	log.SetOutput(os.Stdout)
+
 	config := Config{}
 	cwd, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	configData, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", cwd, "config.yaml"))
@@ -120,7 +126,7 @@ func main() {
 
 // NewConnection is part of the mysql.Handler interface.
 func (db *DB) NewConnection(c *mysql.Conn) {
-	log.Infof("New client from addr [%s], ID [%d]", c.RemoteAddr(), c.ConnectionID)
+	log.Infof("New client from addr [%s] logged in with username [%s], ID [%d]", c.RemoteAddr(), c.User , c.ConnectionID)
 
 	if c.ConnAttrs != nil {
 		log.Info("==== ATTRS ====")

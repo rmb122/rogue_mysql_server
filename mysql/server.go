@@ -291,6 +291,7 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 		return
 	}
 
+	c.User = user
 	// Tell the handler about the connection coming and going.
 	l.handler.NewConnection(c)
 	defer l.handler.ConnectionClosed(c)
