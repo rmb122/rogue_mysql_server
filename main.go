@@ -131,6 +131,11 @@ func (db *DB) NewConnection(c *mysql.Conn) {
 	if c.ConnAttrs != nil {
 		log.Info("==== ATTRS ====")
 		for name, value := range c.ConnAttrs {
+			if name == "_client_name" && value == "MySQL Connector/J" {
+				c.SupportLoadDataLocal = true // 测试发现只有 pymysql 和原生命令行会对这个 flag 真正进行修改
+				 							  // 而且 Connector/J 默认值为 False, 所以这里做特殊兼容
+			}
+
 			log.Infof("[%s]: [%s]", name, value)
 		}
 		log.Info("===============")
