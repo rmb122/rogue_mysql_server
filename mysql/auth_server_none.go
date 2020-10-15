@@ -17,9 +17,9 @@ limitations under the License.
 package mysql
 
 import (
-	"net"
+    "net"
 
-	querypb "vitess.io/vitess/go/vt/proto/query"
+    querypb "vitess.io/vitess/go/vt/proto/query"
 )
 
 // AuthServerNone takes all comers.
@@ -32,27 +32,27 @@ type AuthServerNone struct{}
 // AuthMethod is part of the AuthServer interface.
 // We always return MysqlNativePassword.
 func (a *AuthServerNone) AuthMethod(user string) (string, error) {
-	return MysqlNativePassword, nil
+    return MysqlNativePassword, nil
 }
 
 // Salt makes salt
 func (a *AuthServerNone) Salt() ([]byte, error) {
-	return NewSalt()
+    return NewSalt()
 }
 
 // ValidateHash validates hash
 func (a *AuthServerNone) ValidateHash(salt []byte, user string, authResponse []byte, remoteAddr net.Addr) (Getter, error) {
-	return &NoneGetter{}, nil
+    return &NoneGetter{}, nil
 }
 
 // Negotiate is part of the AuthServer interface.
 // It will never be called.
 func (a *AuthServerNone) Negotiate(c *Conn, user string, remotAddr net.Addr) (Getter, error) {
-	panic("Negotiate should not be called as AuthMethod returned mysql_native_password")
+    panic("Negotiate should not be called as AuthMethod returned mysql_native_password")
 }
 
 func init() {
-	RegisterAuthServerImpl("none", &AuthServerNone{})
+    RegisterAuthServerImpl("none", &AuthServerNone{})
 }
 
 // NoneGetter holds the empty string
@@ -60,5 +60,5 @@ type NoneGetter struct{}
 
 // Get returns the empty string
 func (ng *NoneGetter) Get() *querypb.VTGateCallerID {
-	return &querypb.VTGateCallerID{Username: "userData1"}
+    return &querypb.VTGateCallerID{Username: "userData1"}
 }

@@ -26,25 +26,25 @@ package mysql
 // Most code outside of this package should use replication.Position rather
 // than GTIDSet.
 type GTIDSet interface {
-	// String returns the canonical printed form of the set as expected by a
-	// particular flavor of MySQL.
-	String() string
+    // String returns the canonical printed form of the set as expected by a
+    // particular flavor of MySQL.
+    String() string
 
-	// Flavor returns the key under which the corresponding parser function is
-	// registered in the transactionSetParsers map.
-	Flavor() string
+    // Flavor returns the key under which the corresponding parser function is
+    // registered in the transactionSetParsers map.
+    Flavor() string
 
-	// ContainsGTID returns true if the set contains the specified transaction.
-	ContainsGTID(GTID) bool
+    // ContainsGTID returns true if the set contains the specified transaction.
+    ContainsGTID(GTID) bool
 
-	// Contains returns true if the set is a superset of another set.
-	Contains(GTIDSet) bool
+    // Contains returns true if the set is a superset of another set.
+    Contains(GTIDSet) bool
 
-	// Equal returns true if the set is equal to another set.
-	Equal(GTIDSet) bool
+    // Equal returns true if the set is equal to another set.
+    Equal(GTIDSet) bool
 
-	// AddGTID returns a new GTIDSet that is expanded to contain the given GTID.
-	AddGTID(GTID) GTIDSet
+    // AddGTID returns a new GTIDSet that is expanded to contain the given GTID.
+    AddGTID(GTID) GTIDSet
 }
 
 // gtidSetParsers maps flavor names to parser functions. It is used by

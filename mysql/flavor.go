@@ -17,29 +17,29 @@ limitations under the License.
 package mysql
 
 import (
-	"errors"
-	"fmt"
-	"strconv"
-	"strings"
+    "errors"
+    "fmt"
+    "strconv"
+    "strings"
 
-	"golang.org/x/net/context"
-	"vitess.io/vitess/go/sqltypes"
-	"vitess.io/vitess/go/vt/proto/vtrpc"
-	"vitess.io/vitess/go/vt/vterrors"
+    "golang.org/x/net/context"
+    "vitess.io/vitess/go/sqltypes"
+    "vitess.io/vitess/go/vt/proto/vtrpc"
+    "vitess.io/vitess/go/vt/vterrors"
 )
 
 var (
-	// ErrNotSlave means there is no slave status.
-	// Returned by ShowSlaveStatus().
-	ErrNotSlave = errors.New("no slave status")
+    // ErrNotSlave means there is no slave status.
+    // Returned by ShowSlaveStatus().
+    ErrNotSlave = errors.New("no slave status")
 )
 
 const (
-	// mariaDBReplicationHackPrefix is the prefix of a version for MariaDB 10.0
-	// versions, to work around replication bugs.
-	mariaDBReplicationHackPrefix = "5.5.5-"
-	// mariaDBVersionString is present in
-	mariaDBVersionString = "MariaDB"
+    // mariaDBReplicationHackPrefix is the prefix of a version for MariaDB 10.0
+    // versions, to work around replication bugs.
+    mariaDBReplicationHackPrefix = "5.5.5-"
+    // mariaDBVersionString is present in
+    mariaDBVersionString = "MariaDB"
 )
 
 // flavor is the abstract interface for a flavor.
@@ -49,54 +49,54 @@ const (
 // 1. Oracle MySQL 5.6, 5.7, 8.0, ...
 // 2. MariaDB 10.X
 type flavor interface {
-	// masterGTIDSet returns the current GTIDSet of a server.
-	masterGTIDSet(c *Conn) (GTIDSet, error)
+    // masterGTIDSet returns the current GTIDSet of a server.
+    masterGTIDSet(c *Conn) (GTIDSet, error)
 
-	// startSlave returns the command to start the slave.
-	startSlaveCommand() string
+    // startSlave returns the command to start the slave.
+    startSlaveCommand() string
 
-	// startSlaveUntilAfter will restart replication, but only allow it
-	// to run until `pos` is reached. After reaching pos, replication will be stopped again
-	startSlaveUntilAfter(pos Position) string
+    // startSlaveUntilAfter will restart replication, but only allow it
+    // to run until `pos` is reached. After reaching pos, replication will be stopped again
+    startSlaveUntilAfter(pos Position) string
 
-	// stopSlave returns the command to stop the slave.
-	stopSlaveCommand() string
+    // stopSlave returns the command to stop the slave.
+    stopSlaveCommand() string
 
-	// sendBinlogDumpCommand sends the packet required to start
-	// dumping binlogs from the specified location.
-	sendBinlogDumpCommand(c *Conn, slaveID uint32, startPos Position) error
+    // sendBinlogDumpCommand sends the packet required to start
+    // dumping binlogs from the specified location.
+    sendBinlogDumpCommand(c *Conn, slaveID uint32, startPos Position) error
 
-	// readBinlogEvent reads the next BinlogEvent from the connection.
-	readBinlogEvent(c *Conn) (BinlogEvent, error)
+    // readBinlogEvent reads the next BinlogEvent from the connection.
+    readBinlogEvent(c *Conn) (BinlogEvent, error)
 
-	// resetReplicationCommands returns the commands to completely reset
-	// replication on the host.
-	resetReplicationCommands() []string
+    // resetReplicationCommands returns the commands to completely reset
+    // replication on the host.
+    resetReplicationCommands() []string
 
-	// setSlavePositionCommands returns the commands to set the
-	// replication position at which the slave will resume.
-	setSlavePositionCommands(pos Position) []string
+    // setSlavePositionCommands returns the commands to set the
+    // replication position at which the slave will resume.
+    setSlavePositionCommands(pos Position) []string
 
-	// changeMasterArg returns the specific parameter to add to
-	// a change master command.
-	changeMasterArg() string
+    // changeMasterArg returns the specific parameter to add to
+    // a change master command.
+    changeMasterArg() string
 
-	// status returns the result of 'SHOW SLAVE STATUS',
-	// with parsed replication position.
-	status(c *Conn) (SlaveStatus, error)
+    // status returns the result of 'SHOW SLAVE STATUS',
+    // with parsed replication position.
+    status(c *Conn) (SlaveStatus, error)
 
-	// waitUntilPositionCommand returns the SQL command to issue
-	// to wait until the given position, until the context
-	// expires.  The command returns -1 if it times out. It
-	// returns NULL if GTIDs are not enabled.
-	waitUntilPositionCommand(ctx context.Context, pos Position) (string, error)
+    // waitUntilPositionCommand returns the SQL command to issue
+    // to wait until the given position, until the context
+    // expires.  The command returns -1 if it times out. It
+    // returns NULL if GTIDs are not enabled.
+    waitUntilPositionCommand(ctx context.Context, pos Position) (string, error)
 
-	// enableBinlogPlaybackCommand and disableBinlogPlaybackCommand return an
-	// optional command to run to enable or disable binlog
-	// playback. This is used internally in Google, as the
-	// timestamp cannot be set by regular clients.
-	enableBinlogPlaybackCommand() string
-	disableBinlogPlaybackCommand() string
+    // enableBinlogPlaybackCommand and disableBinlogPlaybackCommand return an
+    // optional command to run to enable or disable binlog
+    // playback. This is used internally in Google, as the
+    // timestamp cannot be set by regular clients.
+    enableBinlogPlaybackCommand() string
+    disableBinlogPlaybackCommand() string
 }
 
 // fillFlavor fills in c.Flavor based on c.ServerVersion.
@@ -110,18 +110,18 @@ type flavor interface {
 // as well (not matching what c.ServerVersion is, but matching after we remove
 // the prefix).
 func (c *Conn) fillFlavor() {
-	if strings.HasPrefix(c.ServerVersion, mariaDBReplicationHackPrefix) {
-		c.ServerVersion = c.ServerVersion[len(mariaDBReplicationHackPrefix):]
-		c.flavor = mariadbFlavor{}
-		return
-	}
+    if strings.HasPrefix(c.ServerVersion, mariaDBReplicationHackPrefix) {
+        c.ServerVersion = c.ServerVersion[len(mariaDBReplicationHackPrefix):]
+        c.flavor = mariadbFlavor{}
+        return
+    }
 
-	if strings.Contains(c.ServerVersion, mariaDBVersionString) {
-		c.flavor = mariadbFlavor{}
-		return
-	}
+    if strings.Contains(c.ServerVersion, mariaDBVersionString) {
+        c.flavor = mariadbFlavor{}
+        return
+    }
 
-	c.flavor = mysqlFlavor{}
+    c.flavor = mysqlFlavor{}
 }
 
 //
@@ -133,60 +133,60 @@ func (c *Conn) fillFlavor() {
 // is identified as MariaDB. Most applications should not care, but
 // this is useful in tests.
 func (c *Conn) IsMariaDB() bool {
-	_, ok := c.flavor.(mariadbFlavor)
-	return ok
+    _, ok := c.flavor.(mariadbFlavor)
+    return ok
 }
 
 // MasterPosition returns the current master replication position.
 func (c *Conn) MasterPosition() (Position, error) {
-	gtidSet, err := c.flavor.masterGTIDSet(c)
-	if err != nil {
-		return Position{}, err
-	}
-	return Position{
-		GTIDSet: gtidSet,
-	}, nil
+    gtidSet, err := c.flavor.masterGTIDSet(c)
+    if err != nil {
+        return Position{}, err
+    }
+    return Position{
+        GTIDSet: gtidSet,
+    }, nil
 }
 
 // StartSlaveCommand returns the command to start the slave.
 func (c *Conn) StartSlaveCommand() string {
-	return c.flavor.startSlaveCommand()
+    return c.flavor.startSlaveCommand()
 }
 
 // StartSlaveUntilAfterCommand returns the command to start the slave.
 func (c *Conn) StartSlaveUntilAfterCommand(pos Position) string {
-	return c.flavor.startSlaveUntilAfter(pos)
+    return c.flavor.startSlaveUntilAfter(pos)
 }
 
 // StopSlaveCommand returns the command to stop the slave.
 func (c *Conn) StopSlaveCommand() string {
-	return c.flavor.stopSlaveCommand()
+    return c.flavor.stopSlaveCommand()
 }
 
 // SendBinlogDumpCommand sends the flavor-specific version of
 // the COM_BINLOG_DUMP command to start dumping raw binlog
 // events over a slave connection, starting at a given GTID.
 func (c *Conn) SendBinlogDumpCommand(slaveID uint32, startPos Position) error {
-	return c.flavor.sendBinlogDumpCommand(c, slaveID, startPos)
+    return c.flavor.sendBinlogDumpCommand(c, slaveID, startPos)
 }
 
 // ReadBinlogEvent reads the next BinlogEvent. This must be used
 // in conjunction with SendBinlogDumpCommand.
 func (c *Conn) ReadBinlogEvent() (BinlogEvent, error) {
-	return c.flavor.readBinlogEvent(c)
+    return c.flavor.readBinlogEvent(c)
 }
 
 // ResetReplicationCommands returns the commands to completely reset
 // replication on the host.
 func (c *Conn) ResetReplicationCommands() []string {
-	return c.flavor.resetReplicationCommands()
+    return c.flavor.resetReplicationCommands()
 }
 
 // SetSlavePositionCommands returns the commands to set the
 // replication position at which the slave will resume
 // when it is later reparented with SetMasterCommands.
 func (c *Conn) SetSlavePositionCommands(pos Position) []string {
-	return c.flavor.setSlavePositionCommands(pos)
+    return c.flavor.setSlavePositionCommands(pos)
 }
 
 // SetMasterCommand returns the command to use the provided master
@@ -194,72 +194,72 @@ func (c *Conn) SetSlavePositionCommands(pos Position) []string {
 // It is guaranteed to be called with replication stopped.
 // It should not start or stop replication.
 func (c *Conn) SetMasterCommand(params *ConnParams, masterHost string, masterPort int, masterConnectRetry int) string {
-	args := []string{
-		fmt.Sprintf("MASTER_HOST = '%s'", masterHost),
-		fmt.Sprintf("MASTER_PORT = %d", masterPort),
-		fmt.Sprintf("MASTER_USER = '%s'", params.Uname),
-		fmt.Sprintf("MASTER_PASSWORD = '%s'", params.Pass),
-		fmt.Sprintf("MASTER_CONNECT_RETRY = %d", masterConnectRetry),
-	}
-	if params.SslEnabled() {
-		args = append(args, "MASTER_SSL = 1")
-	}
-	if params.SslCa != "" {
-		args = append(args, fmt.Sprintf("MASTER_SSL_CA = '%s'", params.SslCa))
-	}
-	if params.SslCaPath != "" {
-		args = append(args, fmt.Sprintf("MASTER_SSL_CAPATH = '%s'", params.SslCaPath))
-	}
-	if params.SslCert != "" {
-		args = append(args, fmt.Sprintf("MASTER_SSL_CERT = '%s'", params.SslCert))
-	}
-	if params.SslKey != "" {
-		args = append(args, fmt.Sprintf("MASTER_SSL_KEY = '%s'", params.SslKey))
-	}
-	args = append(args, c.flavor.changeMasterArg())
-	return "CHANGE MASTER TO\n  " + strings.Join(args, ",\n  ")
+    args := []string{
+        fmt.Sprintf("MASTER_HOST = '%s'", masterHost),
+        fmt.Sprintf("MASTER_PORT = %d", masterPort),
+        fmt.Sprintf("MASTER_USER = '%s'", params.Uname),
+        fmt.Sprintf("MASTER_PASSWORD = '%s'", params.Pass),
+        fmt.Sprintf("MASTER_CONNECT_RETRY = %d", masterConnectRetry),
+    }
+    if params.SslEnabled() {
+        args = append(args, "MASTER_SSL = 1")
+    }
+    if params.SslCa != "" {
+        args = append(args, fmt.Sprintf("MASTER_SSL_CA = '%s'", params.SslCa))
+    }
+    if params.SslCaPath != "" {
+        args = append(args, fmt.Sprintf("MASTER_SSL_CAPATH = '%s'", params.SslCaPath))
+    }
+    if params.SslCert != "" {
+        args = append(args, fmt.Sprintf("MASTER_SSL_CERT = '%s'", params.SslCert))
+    }
+    if params.SslKey != "" {
+        args = append(args, fmt.Sprintf("MASTER_SSL_KEY = '%s'", params.SslKey))
+    }
+    args = append(args, c.flavor.changeMasterArg())
+    return "CHANGE MASTER TO\n  " + strings.Join(args, ",\n  ")
 }
 
 // resultToMap is a helper function used by ShowSlaveStatus.
 func resultToMap(qr *sqltypes.Result) (map[string]string, error) {
-	if len(qr.Rows) == 0 {
-		// The query succeeded, but there is no data.
-		return nil, nil
-	}
-	if len(qr.Rows) > 1 {
-		return nil, vterrors.Errorf(vtrpc.Code_INTERNAL, "query returned %d rows, expected 1", len(qr.Rows))
-	}
-	if len(qr.Fields) != len(qr.Rows[0]) {
-		return nil, vterrors.Errorf(vtrpc.Code_INTERNAL, "query returned %d column names, expected %d", len(qr.Fields), len(qr.Rows[0]))
-	}
+    if len(qr.Rows) == 0 {
+        // The query succeeded, but there is no data.
+        return nil, nil
+    }
+    if len(qr.Rows) > 1 {
+        return nil, vterrors.Errorf(vtrpc.Code_INTERNAL, "query returned %d rows, expected 1", len(qr.Rows))
+    }
+    if len(qr.Fields) != len(qr.Rows[0]) {
+        return nil, vterrors.Errorf(vtrpc.Code_INTERNAL, "query returned %d column names, expected %d", len(qr.Fields), len(qr.Rows[0]))
+    }
 
-	result := make(map[string]string, len(qr.Fields))
-	for i, field := range qr.Fields {
-		result[field.Name] = qr.Rows[0][i].ToString()
-	}
-	return result, nil
+    result := make(map[string]string, len(qr.Fields))
+    for i, field := range qr.Fields {
+        result[field.Name] = qr.Rows[0][i].ToString()
+    }
+    return result, nil
 }
 
 // parseSlaveStatus parses the common fields of SHOW SLAVE STATUS.
 func parseSlaveStatus(fields map[string]string) SlaveStatus {
-	status := SlaveStatus{
-		MasterHost:      fields["Master_Host"],
-		SlaveIORunning:  fields["Slave_IO_Running"] == "Yes",
-		SlaveSQLRunning: fields["Slave_SQL_Running"] == "Yes",
-	}
-	parseInt, _ := strconv.ParseInt(fields["Master_Port"], 10, 0)
-	status.MasterPort = int(parseInt)
-	parseInt, _ = strconv.ParseInt(fields["Connect_Retry"], 10, 0)
-	status.MasterConnectRetry = int(parseInt)
-	parseUint, _ := strconv.ParseUint(fields["Seconds_Behind_Master"], 10, 0)
-	status.SecondsBehindMaster = uint(parseUint)
-	return status
+    status := SlaveStatus{
+        MasterHost:      fields["Master_Host"],
+        SlaveIORunning:  fields["Slave_IO_Running"] == "Yes",
+        SlaveSQLRunning: fields["Slave_SQL_Running"] == "Yes",
+    }
+    parseInt, _ := strconv.ParseInt(fields["Master_Port"], 10, 0)
+    status.MasterPort = int(parseInt)
+    parseInt, _ = strconv.ParseInt(fields["Connect_Retry"], 10, 0)
+    status.MasterConnectRetry = int(parseInt)
+    parseUint, _ := strconv.ParseUint(fields["Seconds_Behind_Master"], 10, 0)
+    status.SecondsBehindMaster = uint(parseUint)
+    return status
 }
 
 // ShowSlaveStatus executes the right SHOW SLAVE STATUS command,
 // and returns a parse Position with other fields.
 func (c *Conn) ShowSlaveStatus() (SlaveStatus, error) {
-	return c.flavor.status(c)
+    return c.flavor.status(c)
 }
 
 // WaitUntilPositionCommand returns the SQL command to issue
@@ -267,17 +267,17 @@ func (c *Conn) ShowSlaveStatus() (SlaveStatus, error) {
 // expires.  The command returns -1 if it times out. It
 // returns NULL if GTIDs are not enabled.
 func (c *Conn) WaitUntilPositionCommand(ctx context.Context, pos Position) (string, error) {
-	return c.flavor.waitUntilPositionCommand(ctx, pos)
+    return c.flavor.waitUntilPositionCommand(ctx, pos)
 }
 
 // EnableBinlogPlaybackCommand returns a command to run to enable
 // binlog playback.
 func (c *Conn) EnableBinlogPlaybackCommand() string {
-	return c.flavor.enableBinlogPlaybackCommand()
+    return c.flavor.enableBinlogPlaybackCommand()
 }
 
 // DisableBinlogPlaybackCommand returns a command to run to disable
 // binlog playback.
 func (c *Conn) DisableBinlogPlaybackCommand() string {
-	return c.flavor.disableBinlogPlaybackCommand()
+    return c.flavor.disableBinlogPlaybackCommand()
 }

@@ -22,10 +22,10 @@ package mysql
 
 // enableBinlogPlaybackCommand is part of the Flavor interface.
 func (mariadbFlavor) enableBinlogPlaybackCommand() string {
-	return ""
+    return ""
 }
 
 // disableBinlogPlaybackCommand is part of the Flavor interface.
 func (mariadbFlavor) disableBinlogPlaybackCommand() string {
-	return ""
+    return ""
 }

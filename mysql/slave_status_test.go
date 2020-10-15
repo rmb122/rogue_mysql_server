@@ -17,38 +17,38 @@ limitations under the License.
 package mysql
 
 import (
-	"testing"
+    "testing"
 )
 
 func TestStatusSlaveRunning(t *testing.T) {
-	input := &SlaveStatus{
-		SlaveIORunning:  true,
-		SlaveSQLRunning: true,
-	}
-	want := true
-	if got := input.SlaveRunning(); got != want {
-		t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
-	}
+    input := &SlaveStatus{
+        SlaveIORunning:  true,
+        SlaveSQLRunning: true,
+    }
+    want := true
+    if got := input.SlaveRunning(); got != want {
+        t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
+    }
 }
 
 func TestStatusSlaveIONotRunning(t *testing.T) {
-	input := &SlaveStatus{
-		SlaveIORunning:  false,
-		SlaveSQLRunning: true,
-	}
-	want := false
-	if got := input.SlaveRunning(); got != want {
-		t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
-	}
+    input := &SlaveStatus{
+        SlaveIORunning:  false,
+        SlaveSQLRunning: true,
+    }
+    want := false
+    if got := input.SlaveRunning(); got != want {
+        t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
+    }
 }
 
 func TestStatusSlaveSQLNotRunning(t *testing.T) {
-	input := &SlaveStatus{
-		SlaveIORunning:  true,
-		SlaveSQLRunning: false,
-	}
-	want := false
-	if got := input.SlaveRunning(); got != want {
-		t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
-	}
+    input := &SlaveStatus{
+        SlaveIORunning:  true,
+        SlaveSQLRunning: false,
+    }
+    want := false
+    if got := input.SlaveRunning(); got != want {
+        t.Errorf("%#v.SlaveRunning() = %v, want %v", input, got, want)
+    }
 }

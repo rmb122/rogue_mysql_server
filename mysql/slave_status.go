@@ -17,53 +17,53 @@ limitations under the License.
 package mysql
 
 import (
-	replicationdatapb "vitess.io/vitess/go/vt/proto/replicationdata"
-	"vitess.io/vitess/go/vt/vterrors"
+    replicationdatapb "vitess.io/vitess/go/vt/proto/replicationdata"
+    "vitess.io/vitess/go/vt/vterrors"
 )
 
 // SlaveStatus holds replication information from SHOW SLAVE STATUS.
 type SlaveStatus struct {
-	Position            Position
-	SlaveIORunning      bool
-	SlaveSQLRunning     bool
-	SecondsBehindMaster uint
-	MasterHost          string
-	MasterPort          int
-	MasterConnectRetry  int
+    Position            Position
+    SlaveIORunning      bool
+    SlaveSQLRunning     bool
+    SecondsBehindMaster uint
+    MasterHost          string
+    MasterPort          int
+    MasterConnectRetry  int
 }
 
 // SlaveRunning returns true iff both the Slave IO and Slave SQL threads are
 // running.
 func (s *SlaveStatus) SlaveRunning() bool {
-	return s.SlaveIORunning && s.SlaveSQLRunning
+    return s.SlaveIORunning && s.SlaveSQLRunning
 }
 
 // SlaveStatusToProto translates a Status to proto3.
 func SlaveStatusToProto(s SlaveStatus) *replicationdatapb.Status {
-	return &replicationdatapb.Status{
-		Position:            EncodePosition(s.Position),
-		SlaveIoRunning:      s.SlaveIORunning,
-		SlaveSqlRunning:     s.SlaveSQLRunning,
-		SecondsBehindMaster: uint32(s.SecondsBehindMaster),
-		MasterHost:          s.MasterHost,
-		MasterPort:          int32(s.MasterPort),
-		MasterConnectRetry:  int32(s.MasterConnectRetry),
-	}
+    return &replicationdatapb.Status{
+        Position:            EncodePosition(s.Position),
+        SlaveIoRunning:      s.SlaveIORunning,
+        SlaveSqlRunning:     s.SlaveSQLRunning,
+        SecondsBehindMaster: uint32(s.SecondsBehindMaster),
+        MasterHost:          s.MasterHost,
+        MasterPort:          int32(s.MasterPort),
+        MasterConnectRetry:  int32(s.MasterConnectRetry),
+    }
 }
 
 // ProtoToSlaveStatus translates a proto Status, or panics.
 func ProtoToSlaveStatus(s *replicationdatapb.Status) SlaveStatus {
-	pos, err := DecodePosition(s.Position)
-	if err != nil {
-		panic(vterrors.Wrapf(err, "cannot decode Position"))
-	}
-	return SlaveStatus{
-		Position:            pos,
-		SlaveIORunning:      s.SlaveIoRunning,
-		SlaveSQLRunning:     s.SlaveSqlRunning,
-		SecondsBehindMaster: uint(s.SecondsBehindMaster),
-		MasterHost:          s.MasterHost,
-		MasterPort:          int(s.MasterPort),
-		MasterConnectRetry:  int(s.MasterConnectRetry),
-	}
+    pos, err := DecodePosition(s.Position)
+    if err != nil {
+        panic(vterrors.Wrapf(err, "cannot decode Position"))
+    }
+    return SlaveStatus{
+        Position:            pos,
+        SlaveIORunning:      s.SlaveIoRunning,
+        SlaveSQLRunning:     s.SlaveSqlRunning,
+        SecondsBehindMaster: uint(s.SecondsBehindMaster),
+        MasterHost:          s.MasterHost,
+        MasterPort:          int(s.MasterPort),
+        MasterConnectRetry:  int(s.MasterConnectRetry),
+    }
 }

@@ -17,18 +17,18 @@ limitations under the License.
 package mysql
 
 import (
-	"testing"
+    "testing"
 )
 
 func TestMariadbSetMasterCommands(t *testing.T) {
-	params := &ConnParams{
-		Uname: "username",
-		Pass:  "password",
-	}
-	masterHost := "localhost"
-	masterPort := 123
-	masterConnectRetry := 1234
-	want := `CHANGE MASTER TO
+    params := &ConnParams{
+        Uname: "username",
+        Pass:  "password",
+    }
+    masterHost := "localhost"
+    masterPort := 123
+    masterConnectRetry := 1234
+    want := `CHANGE MASTER TO
   MASTER_HOST = 'localhost',
   MASTER_PORT = 123,
   MASTER_USER = 'username',
@@ -36,27 +36,27 @@ func TestMariadbSetMasterCommands(t *testing.T) {
   MASTER_CONNECT_RETRY = 1234,
   MASTER_USE_GTID = current_pos`
 
-	conn := &Conn{flavor: mariadbFlavor{}}
-	got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
-	if got != want {
-		t.Errorf("mariadbFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
-	}
+    conn := &Conn{flavor: mariadbFlavor{}}
+    got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
+    if got != want {
+        t.Errorf("mariadbFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
+    }
 }
 
 func TestMariadbSetMasterCommandsSSL(t *testing.T) {
-	params := &ConnParams{
-		Uname:     "username",
-		Pass:      "password",
-		SslCa:     "ssl-ca",
-		SslCaPath: "ssl-ca-path",
-		SslCert:   "ssl-cert",
-		SslKey:    "ssl-key",
-	}
-	params.EnableSSL()
-	masterHost := "localhost"
-	masterPort := 123
-	masterConnectRetry := 1234
-	want := `CHANGE MASTER TO
+    params := &ConnParams{
+        Uname:     "username",
+        Pass:      "password",
+        SslCa:     "ssl-ca",
+        SslCaPath: "ssl-ca-path",
+        SslCert:   "ssl-cert",
+        SslKey:    "ssl-key",
+    }
+    params.EnableSSL()
+    masterHost := "localhost"
+    masterPort := 123
+    masterConnectRetry := 1234
+    want := `CHANGE MASTER TO
   MASTER_HOST = 'localhost',
   MASTER_PORT = 123,
   MASTER_USER = 'username',
@@ -69,9 +69,9 @@ func TestMariadbSetMasterCommandsSSL(t *testing.T) {
   MASTER_SSL_KEY = 'ssl-key',
   MASTER_USE_GTID = current_pos`
 
-	conn := &Conn{flavor: mariadbFlavor{}}
-	got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
-	if got != want {
-		t.Errorf("mariadbFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
-	}
+    conn := &Conn{flavor: mariadbFlavor{}}
+    got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
+    if got != want {
+        t.Errorf("mariadbFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
+    }
 }

@@ -19,14 +19,14 @@ package mysql
 import "testing"
 
 func TestMysql56SetMasterCommands(t *testing.T) {
-	params := &ConnParams{
-		Uname: "username",
-		Pass:  "password",
-	}
-	masterHost := "localhost"
-	masterPort := 123
-	masterConnectRetry := 1234
-	want := `CHANGE MASTER TO
+    params := &ConnParams{
+        Uname: "username",
+        Pass:  "password",
+    }
+    masterHost := "localhost"
+    masterPort := 123
+    masterConnectRetry := 1234
+    want := `CHANGE MASTER TO
   MASTER_HOST = 'localhost',
   MASTER_PORT = 123,
   MASTER_USER = 'username',
@@ -34,27 +34,27 @@ func TestMysql56SetMasterCommands(t *testing.T) {
   MASTER_CONNECT_RETRY = 1234,
   MASTER_AUTO_POSITION = 1`
 
-	conn := &Conn{flavor: mysqlFlavor{}}
-	got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
-	if got != want {
-		t.Errorf("mysqlFlavor.SetMasterCommand(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
-	}
+    conn := &Conn{flavor: mysqlFlavor{}}
+    got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
+    if got != want {
+        t.Errorf("mysqlFlavor.SetMasterCommand(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
+    }
 }
 
 func TestMysql56SetMasterCommandsSSL(t *testing.T) {
-	params := &ConnParams{
-		Uname:     "username",
-		Pass:      "password",
-		SslCa:     "ssl-ca",
-		SslCaPath: "ssl-ca-path",
-		SslCert:   "ssl-cert",
-		SslKey:    "ssl-key",
-	}
-	params.EnableSSL()
-	masterHost := "localhost"
-	masterPort := 123
-	masterConnectRetry := 1234
-	want := `CHANGE MASTER TO
+    params := &ConnParams{
+        Uname:     "username",
+        Pass:      "password",
+        SslCa:     "ssl-ca",
+        SslCaPath: "ssl-ca-path",
+        SslCert:   "ssl-cert",
+        SslKey:    "ssl-key",
+    }
+    params.EnableSSL()
+    masterHost := "localhost"
+    masterPort := 123
+    masterConnectRetry := 1234
+    want := `CHANGE MASTER TO
   MASTER_HOST = 'localhost',
   MASTER_PORT = 123,
   MASTER_USER = 'username',
@@ -67,9 +67,9 @@ func TestMysql56SetMasterCommandsSSL(t *testing.T) {
   MASTER_SSL_KEY = 'ssl-key',
   MASTER_AUTO_POSITION = 1`
 
-	conn := &Conn{flavor: mysqlFlavor{}}
-	got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
-	if got != want {
-		t.Errorf("mysqlFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
-	}
+    conn := &Conn{flavor: mysqlFlavor{}}
+    got := conn.SetMasterCommand(params, masterHost, masterPort, masterConnectRetry)
+    if got != want {
+        t.Errorf("mysqlFlavor.SetMasterCommands(%#v, %#v, %#v, %#v) = %#v, want %#v", params, masterHost, masterPort, masterConnectRetry, got, want)
+    }
 }

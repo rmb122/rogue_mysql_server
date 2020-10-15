@@ -18,43 +18,43 @@ package mysql
 
 // ConnParams contains all the parameters to use to connect to mysql.
 type ConnParams struct {
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
-	Uname      string `json:"uname"`
-	Pass       string `json:"pass"`
-	DbName     string `json:"dbname"`
-	UnixSocket string `json:"unix_socket"`
-	Charset    string `json:"charset"`
-	Flags      uint64 `json:"flags"`
+    Host       string `json:"host"`
+    Port       int    `json:"port"`
+    Uname      string `json:"uname"`
+    Pass       string `json:"pass"`
+    DbName     string `json:"dbname"`
+    UnixSocket string `json:"unix_socket"`
+    Charset    string `json:"charset"`
+    Flags      uint64 `json:"flags"`
 
-	// The following SSL flags are only used when flags |= 2048
-	// is set (CapabilityClientSSL).
-	SslCa      string `json:"ssl_ca"`
-	SslCaPath  string `json:"ssl_ca_path"`
-	SslCert    string `json:"ssl_cert"`
-	SslKey     string `json:"ssl_key"`
-	ServerName string `json:"server_name"`
+    // The following SSL flags are only used when flags |= 2048
+    // is set (CapabilityClientSSL).
+    SslCa      string `json:"ssl_ca"`
+    SslCaPath  string `json:"ssl_ca_path"`
+    SslCert    string `json:"ssl_cert"`
+    SslKey     string `json:"ssl_key"`
+    ServerName string `json:"server_name"`
 
-	// The following is only set when the deprecated "dbname" flags are
-	// supplied and will be removed.
-	DeprecatedDBName string
+    // The following is only set when the deprecated "dbname" flags are
+    // supplied and will be removed.
+    DeprecatedDBName string
 
-	// The following is only set to force the client to connect without
-	// using CapabilityClientDeprecateEOF
-	DisableClientDeprecateEOF bool
+    // The following is only set to force the client to connect without
+    // using CapabilityClientDeprecateEOF
+    DisableClientDeprecateEOF bool
 }
 
 // EnableSSL will set the right flag on the parameters.
 func (cp *ConnParams) EnableSSL() {
-	cp.Flags |= CapabilityClientSSL
+    cp.Flags |= CapabilityClientSSL
 }
 
 // SslEnabled returns if SSL is enabled.
 func (cp *ConnParams) SslEnabled() bool {
-	return (cp.Flags & CapabilityClientSSL) > 0
+    return (cp.Flags & CapabilityClientSSL) > 0
 }
 
 // EnableClientFoundRows sets the flag for CLIENT_FOUND_ROWS.
 func (cp *ConnParams) EnableClientFoundRows() {
-	cp.Flags |= CapabilityClientFoundRows
+    cp.Flags |= CapabilityClientFoundRows
 }
