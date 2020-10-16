@@ -25,8 +25,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+    "vitess.io/vitess/go/sqltypes"
 
-	log "github.com/sirupsen/logrus"
+    log "github.com/sirupsen/logrus"
 	"vitess.io/vitess/go/bucketpool"
 	"vitess.io/vitess/go/sync2"
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -156,6 +157,7 @@ type Conn struct {
     currentEphemeralBuffer *[]byte
 
     SupportLoadDataLocal bool
+    IsJdbcClient bool
 
     ConnAttrs map[string]string
 }
@@ -888,7 +890,53 @@ func (c *Conn) handleNextCommand(handler Handler) error {
 }
 
 func (c *Conn) execQuery(query string, handler Handler, more bool) error {
-    handler.ComQuery(c, query, nil)
+    fieldSent := false
+    // sendFinished is set if the response should just be an OK packet.
+    sendFinished := false
+
+    _ = handler.ComQuery(c, query, func(qr *sqltypes.Result) error {
+        flag := c.StatusFlags
+        if more {
+            flag |= ServerMoreResultsExists
+        }
+        if sendFinished {
+            // Failsafe: Unreachable if server is well-behaved.
+            return io.EOF
+        }
+
+        if !fieldSent {
+            fieldSent = true
+
+            if len(qr.Fields) == 0 {
+                sendFinished = true
+
+                // A successful callback with no fields means that this was a
+                // DML or other write-only operation.
+                //
+                // We should not send any more packets after this, but make sure
+                // to extract the affected rows and last insert id from the result
+                // struct here since clients expect it.
+                return c.writeOKPacket(qr.RowsAffected, qr.InsertID, flag, handler.WarningCount(c))
+            }
+            if err := c.writeFields(qr); err != nil {
+                return err
+            }
+        }
+
+        return c.writeRows(qr)
+    })
+
+    if fieldSent {
+        // Send the end packet only sendFinished is false (results were streamed).
+        // In this case the affectedRows and lastInsertID are always 0 since it
+        // was a read operation.
+        if !sendFinished {
+            if err := c.writeEndResult(more, 0, 0, handler.WarningCount(c)); err != nil {
+                log.Errorf("Error writing result to %s: %v", c, err)
+                return err
+            }
+        }
+    }
     return nil
 }
 

