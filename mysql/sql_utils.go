@@ -1,7 +1,6 @@
-package main
+package mysql
 
 import (
-    "rogue_mysql_server/mysql"
     "vitess.io/vitess/go/sqltypes"
     "vitess.io/vitess/go/vt/proto/query"
 )
@@ -23,14 +22,14 @@ type Column struct {
 }
 
 type Schema []*Column
-type Row []interface{}
+type SQLRow []interface{}
 
-func schemaToFields(s Schema) []*query.Field {
+func SchemaToFields(s Schema) []*query.Field {
     fields := make([]*query.Field, len(s))
     for i, c := range s {
-        var charset uint32 = mysql.CharacterSetUtf8
+        var charset uint32 = CharacterSetUtf8
         if c.Type == sqltypes.Blob {
-            charset = mysql.CharacterSetBinary
+            charset = CharacterSetBinary
         }
 
         fields[i] = &query.Field{
@@ -42,33 +41,31 @@ func schemaToFields(s Schema) []*query.Field {
     return fields
 }
 
-func rowToSQL(row Row) []sqltypes.Value {
+func RowToSQL(row SQLRow) []sqltypes.Value {
     o := make([]sqltypes.Value, len(row))
 
     for i, v := range row {
         switch value := v.(type) {
         case []byte:
             o[i] = sqltypes.MakeTrusted(sqltypes.Blob, value)
-            break
         case string:
             o[i] = sqltypes.MakeTrusted(sqltypes.Text, []byte(value))
         default:
             o[i] = sqltypes.MakeTrusted(sqltypes.Blob, []byte{})
-            break
         }
     }
 
     return o
 }
 
-func getMysqlVars() *sqltypes.Result {
-    r := &sqltypes.Result{Fields: schemaToFields(Schema{
+func GetMysqlVars() *sqltypes.Result {
+    r := &sqltypes.Result{Fields: SchemaToFields(Schema{
         {Name: "system_time_zone", Type: sqltypes.Text, Nullable: false},
         {Name: "time_zone", Type: sqltypes.Text, Nullable: false},
         {Name: "init_connect", Type: sqltypes.Text, Nullable: false},
         {Name: "auto_increment_increment", Type: sqltypes.Text, Nullable: false},
         {Name: "max_allowed_packet", Type: sqltypes.Text, Nullable: false},
     })}
-    r.Rows = append(r.Rows, rowToSQL(Row{"UTC", "SYSTEM", "", "1", "10000"}))
+    r.Rows = append(r.Rows, RowToSQL(SQLRow{"UTC", "SYSTEM", "", "1", "10000"}))
     return r
 }

