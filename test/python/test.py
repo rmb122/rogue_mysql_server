@@ -1,4 +1,4 @@
 import pymysql
 
-mysql = pymysql.connections.Connection('127.0.0.1', 'root', local_infile=True)
+mysql = pymysql.connect(host='127.0.0.1', user='root', password='root', local_infile=True)
 mysql.query("SELECT 123;")

