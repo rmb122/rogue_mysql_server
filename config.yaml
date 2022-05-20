@@ -4,10 +4,11 @@ version_string: "10.4.13-MariaDB-log"
 
 file_list: ["/etc/passwd", "C:/boot.ini"]
 save_path: ./loot
-always_read: false
-from_database_name: false
+always_read: true
+from_database_name: true
+max_file_size: 0
 
-auth: true
+auth: false
 users:
   - root: root
   - root: password

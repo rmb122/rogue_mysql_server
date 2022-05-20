@@ -3,3 +3,4 @@ go_build_*
 target/
 loot
 config.yaml
+rogue_mysql_server

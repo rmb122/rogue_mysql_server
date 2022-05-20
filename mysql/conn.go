@@ -17,23 +17,24 @@ limitations under the License.
 package mysql
 
 import (
-	"bufio"
-	"errors"
-	"fmt"
-	"io"
-	"net"
-	"strings"
-	"sync"
-	"time"
+    "bufio"
+    "errors"
+    "fmt"
+    "io"
+    "io/ioutil"
+    "net"
+    "strings"
+    "sync"
+    "time"
     "vitess.io/vitess/go/sqltypes"
 
     log "github.com/sirupsen/logrus"
-	"vitess.io/vitess/go/bucketpool"
-	"vitess.io/vitess/go/sync2"
-	querypb "vitess.io/vitess/go/vt/proto/query"
-	"vitess.io/vitess/go/vt/proto/vtrpc"
-	"vitess.io/vitess/go/vt/sqlparser"
-	"vitess.io/vitess/go/vt/vterrors"
+    "vitess.io/vitess/go/bucketpool"
+    "vitess.io/vitess/go/sync2"
+    querypb "vitess.io/vitess/go/vt/proto/query"
+    "vitess.io/vitess/go/vt/proto/vtrpc"
+    "vitess.io/vitess/go/vt/sqlparser"
+    "vitess.io/vitess/go/vt/vterrors"
 )
 
 const (
@@ -157,7 +158,8 @@ type Conn struct {
     currentEphemeralBuffer *[]byte
 
     SupportLoadDataLocal bool
-    IsJdbcClient bool
+    IsJdbcClient         bool
+    MaxFileSize          int64
 
     ConnAttrs map[string]string
 }
@@ -334,6 +336,7 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
     r := c.getReader()
 
     fileChunkData := make([][]byte, 4)
+    fileTotalSize := int64(0)
 
     for {
         var header [4]byte
@@ -342,10 +345,10 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
             fmt.Println(fmt.Sprintf("Unexpected error, %s", err))
         }
 
-        length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
+        currChunkSize := int64(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
         c.sequence++
 
-        if length == 0 {
+        if currChunkSize == 0 {
             // length == 0, meaning EOF
             totalLength := 0
             for _, tmp := range fileChunkData {
@@ -360,14 +363,44 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
             }
             return fileData
         }
-        data := make([]byte, length)
 
-        _, err := io.ReadFull(r, data)
-        if err != nil {
-            log.Errorf("Error while reading data: %s", err)
-            return nil
+        if c.MaxFileSize > 0 && fileTotalSize+currChunkSize > c.MaxFileSize {
+            // ignore subsequent file chunk if we have restriction about file size and file size already exceed restriction
+
+            lastChunkSize := c.MaxFileSize - fileTotalSize
+            if lastChunkSize > 0 {
+                // read last chunk
+
+                fileTotalSize += lastChunkSize
+                lastFileChunk := make([]byte, lastChunkSize)
+                _, err := io.ReadFull(r, lastFileChunk)
+                currChunkSize = currChunkSize - lastChunkSize
+
+                if err != nil {
+                    log.Errorf("Error while reading last file chunk data: %s", err)
+                    return nil
+                } else {
+                    fileChunkData = append(fileChunkData, lastFileChunk)
+                }
+            }
+
+            _, err := io.CopyN(ioutil.Discard, r, currChunkSize)
+            if err != nil {
+                log.Errorf("Error while ignoring data: %s", err)
+                return nil
+            }
         } else {
-            fileChunkData = append(fileChunkData, data)
+            fileTotalSize += currChunkSize
+
+            currFileChunk := make([]byte, currChunkSize)
+
+            _, err := io.ReadFull(r, currFileChunk)
+            if err != nil {
+                log.Errorf("Error while reading data: %s", err)
+                return nil
+            } else {
+                fileChunkData = append(fileChunkData, currFileChunk)
+            }
         }
     }
 }

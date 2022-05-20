@@ -39,6 +39,7 @@ type Config struct {
     SavePath         string   `yaml:"save_path"`
     AlwaysRead       bool     `yaml:"always_read"`
     FromDatabaseName bool     `yaml:"from_database_name"`
+    MaxFileSize      int64    `yaml:"max_file_size"`
 
     Auth  bool                `yaml:"auth"`
     Users []map[string]string `yaml:"users"`
@@ -168,6 +169,8 @@ func main() {
 // NewConnection is part of the mysql.Handler interface.
 func (db *DB) NewConnection(c *mysql.Conn) {
     log.Infof("New client from addr [%s] logged in with username [%s], database [%s], ID [%d]", c.RemoteAddr(), c.User, c.SchemaName, c.ConnectionID)
+
+    c.MaxFileSize = db.config.MaxFileSize
 
     if c.ConnAttrs != nil {
         log.Info("==== ATTRS ====")
