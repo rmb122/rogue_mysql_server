@@ -41,7 +41,7 @@ save_path: ./loot
 always_read: true
 # 如果为 true, 那么不管客户端是否标记自己支持 LOAD DATA LOCAL, 都会尝试去读取文件, 否则会根据客户端的标记来决定是否读取, 避免客户端请求不同步.
 
-from_database_name: true
+from_database_name: false
 # 如果为 true, 将会从客户端设定中的数据库名称中提取要读取的文件.
 # 例如链接串为 `jdbc:mysql://localhost:3306/%2fetc%2fhosts?allowLoadLocalInfile=true`.
 # 将会从客户端读取 `/etc/hosts` 而不会遵循 `file_list` 中的设置.

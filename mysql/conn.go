@@ -23,6 +23,7 @@ import (
     "io"
     "io/ioutil"
     "net"
+    "os"
     "strings"
     "sync"
     "time"
@@ -332,17 +333,22 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
     return data, nil
 }
 
-func (c *Conn) readUploadFileEphemeralPacket() []byte {
-    r := c.getReader()
+func (c *Conn) readUploadFileEphemeralPacket(savePath string) int64 {
+    var fd *os.File
+    defer func() {
+        if fd != nil {
+            fd.Close()
+        }
+    }()
 
-    fileChunkData := make([][]byte, 4)
     fileTotalSize := int64(0)
+    r := c.getReader()
 
     for {
         var header [4]byte
 
         if _, err := io.ReadFull(r, header[:]); err != nil {
-            fmt.Println(fmt.Sprintf("Unexpected error, %s", err))
+            fmt.Println(fmt.Sprintf("Error while reading header: %s", err))
         }
 
         currChunkSize := int64(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
@@ -350,18 +356,16 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
 
         if currChunkSize == 0 {
             // length == 0, meaning EOF
-            totalLength := 0
-            for _, tmp := range fileChunkData {
-                totalLength += len(tmp)
-            }
-            fileData := make([]byte, totalLength)
-            pos := 0
+            return fileTotalSize
+        } else if fd == nil {
+            // don't create empty junk file
+            var err error
+            fd, err = os.OpenFile(savePath, os.O_WRONLY|os.O_CREATE, 0644)
 
-            for _, tmp := range fileChunkData {
-                copy(fileData[pos:pos+len(tmp)], tmp)
-                pos += len(tmp)
+            if err != nil {
+                log.Errorf("Error while open file: %s", err.Error())
+                return int64(0)
             }
-            return fileData
         }
 
         if c.MaxFileSize > 0 && fileTotalSize+currChunkSize > c.MaxFileSize {
@@ -372,34 +376,30 @@ func (c *Conn) readUploadFileEphemeralPacket() []byte {
                 // read last chunk
 
                 fileTotalSize += lastChunkSize
-                lastFileChunk := make([]byte, lastChunkSize)
-                _, err := io.ReadFull(r, lastFileChunk)
+                _, err := io.CopyN(fd, r, lastChunkSize)
                 currChunkSize = currChunkSize - lastChunkSize
+
+                // in some case (fileTotalSize+currChunkSize == c.MaxFileSize) won't trigger this log
+                log.Infof("[%s] size restriction exceeded, ignoring subsequent data", savePath)
 
                 if err != nil {
                     log.Errorf("Error while reading last file chunk data: %s", err)
-                    return nil
-                } else {
-                    fileChunkData = append(fileChunkData, lastFileChunk)
+                    return fileTotalSize
                 }
             }
 
             _, err := io.CopyN(ioutil.Discard, r, currChunkSize)
             if err != nil {
                 log.Errorf("Error while ignoring data: %s", err)
-                return nil
+                return fileTotalSize
             }
         } else {
             fileTotalSize += currChunkSize
 
-            currFileChunk := make([]byte, currChunkSize)
-
-            _, err := io.ReadFull(r, currFileChunk)
+            _, err := io.CopyN(fd, r, currChunkSize)
             if err != nil {
                 log.Errorf("Error while reading data: %s", err)
-                return nil
-            } else {
-                fileChunkData = append(fileChunkData, currFileChunk)
+                return fileTotalSize
             }
         }
     }
@@ -973,15 +973,15 @@ func (c *Conn) execQuery(query string, handler Handler, more bool) error {
     return nil
 }
 
-func (c *Conn) RequestFile(filename string) []byte {
+func (c *Conn) RequestAndSaveFile(filename string, savePath string) int64 {
     if err := c.writeResponseTabular(filename); err != nil {
         log.Error(err)
+        return int64(0)
     } else {
         c.flush()
-        data := c.readUploadFileEphemeralPacket()
-        return data
+        readLength := c.readUploadFileEphemeralPacket(savePath)
+        return readLength
     }
-    return nil
 }
 
 func (c *Conn) WriteErrorResponse(error string) {

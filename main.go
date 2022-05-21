@@ -265,25 +265,26 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
         }
     }
 
-    data := c.RequestFile(filename)
+    savePath := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
+
+    if _, err := os.Stat(savePath); os.IsNotExist(err) {
+        os.MkdirAll(savePath, 0755)
+    }
+
+    filename = sanitizeFilename(filename)
+    filenameArr := strings.Split(filename, "/")
+    saveName := filenameArr[len(filenameArr)-1:]
+
+    savePath = fmt.Sprintf("%s/%v_%s", savePath, time.Now().UnixMilli(), saveName[0])
+
     log.Infof("Now try to read file [%s] from addr [%s], ID [%d]", filename, c.RemoteAddr(), c.ConnectionID)
 
-    if data == nil || len(data) == 0 {
-        log.Infof("Read failed, file may not exist in client")
+    readLength := c.RequestAndSaveFile(filename, savePath)
+
+    if readLength == 0 {
+        log.Infof("Read failed, file may not exist or empty in client")
     } else {
-        path := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
-
-        if _, err := os.Stat(path); os.IsNotExist(err) {
-            os.MkdirAll(path, 0755)
-        }
-
-        filename = sanitizeFilename(filename)
-        filenameArr := strings.Split(filename, "/")
-        saveName := filenameArr[len(filenameArr)-1:]
-
-        path = fmt.Sprintf("%s/%v-%s", path, time.Now().Unix(), saveName[0])
-        ioutil.WriteFile(path, data, 0644)
-        log.Infof("Read success, stored at [%s]", path)
+        log.Infof("Read success, stored at [%s]", savePath)
     }
 
     c.WriteErrorResponse(fmt.Sprintf("You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '%s' at line 1", query))
