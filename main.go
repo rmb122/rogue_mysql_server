@@ -244,6 +244,7 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
         return nil
     }
 
+    // default filename, used only if no filename is specified
     filename := "/etc/passwd"
 
     if !db.config.FromDatabaseName {
@@ -271,9 +272,9 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
         os.MkdirAll(savePath, 0755)
     }
 
-    filename = sanitizeFilename(filename)
-    filenameArr := strings.Split(filename, "/")
-    saveName := filenameArr[len(filenameArr)-1:]
+    sanitizedFilename := sanitizeFilename(filename)
+    sanitizedFilenameArr := strings.Split(sanitizedFilename, "/")
+    saveName := sanitizedFilenameArr[len(sanitizedFilenameArr)-1:]
 
     savePath = fmt.Sprintf("%s/%v_%s", savePath, time.Now().UnixMilli(), saveName[0])
 
