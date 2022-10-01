@@ -1,0 +1,30 @@
+on:
+  release:
+    types: [created]
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: ["386", "amd64", "arm64"]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: wangyoucao577/go-release-action@v1.32
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        goos: ${{ matrix.goos }}
+        goarch: ${{ matrix.goarch }}
+        goversion: "1.19"
+        pre_command: "export CGO_ENABLED=0"
+        binary_name: "rogue_mysql_server"
+        extra_files: config.yaml README.md
+        compress_assets: zip
+        build_flags: "-trimpath"
+        ldflags: "-s -w"
