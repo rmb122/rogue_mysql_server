@@ -65,7 +65,7 @@ from_database_name: false
 # The server will try to read `/etc/hosts` instead of the file in `file_list`.
 
 max_file_size: 0
-# Max size of the reading file (unit is bytes). Any content in the file that exceeds this size limit will be discarded.
+# Max size of the reading file (unit in bytes). Any content in the file that exceeds this size limit will be discarded.
 # If the size is less than or equal to zero, meaning no limit on size.
 
 auth: false
