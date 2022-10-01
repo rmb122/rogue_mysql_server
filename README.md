@@ -22,6 +22,23 @@
 * 读取客户端的 ConnAttr, 可能会包含一些客户端的额外信息
 * 对于 jdbc, 可控链接串的情况下可以利用 mysql-connector-java 反序列化漏洞进行 RCE
 
+## 使用
+
+在当前目录下生成配置文件模版, 如果已有配置文件可以跳过这一步
+```sh
+./rogue_mysql_server -generate
+```
+
+运行服务器, 使用刚刚生成的 config.yaml
+```sh
+./rogue_mysql_server
+```
+
+或者手动指定配置路径
+```sh
+./rogue_mysql_server -config other_config.yaml
+```
+
 ## 配置文件
 
 示例:

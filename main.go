@@ -2,11 +2,12 @@ package main
 
 import (
     "crypto/sha1"
+    _ "embed"
     "encoding/hex"
+    "flag"
     "fmt"
     log "github.com/sirupsen/logrus"
     "gopkg.in/yaml.v2"
-    "io/ioutil"
     "net/url"
     "os"
     "os/exec"
@@ -29,6 +30,9 @@ type DB struct {
 
     YsoserialOutput map[string][]byte
 }
+
+//go:embed config.yaml
+var defaultConfig string
 
 type Config struct {
     Host          string `yaml:"host"`
@@ -96,9 +100,31 @@ func main() {
     log.SetFormatter(formatter)
     log.SetOutput(os.Stdout)
 
-    config := Config{}
     cwd, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-    configData, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", cwd, "config.yaml"))
+    defaultConfigPath := fmt.Sprintf("%s/%s", cwd, "config.yaml")
+
+    argParser := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+    configPath := argParser.String("config", defaultConfigPath, "path of the config file")
+    generateConfig := argParser.Bool("generate", false, "write template config to the path of config argument")
+
+    err := argParser.Parse(os.Args[1:])
+    if err != nil {
+        log.Errorf("Command line parse error: %s", err)
+        os.Exit(-1)
+    }
+
+    if *generateConfig {
+        err := os.WriteFile(*configPath, []byte(defaultConfig), 0666)
+        if err == nil {
+            os.Exit(0)
+        } else {
+            log.Errorf("Template config write to %s failed, error: %s", defaultConfigPath, err)
+            os.Exit(-1)
+        }
+    }
+
+    config := Config{}
+    configData, err := os.ReadFile(*configPath)
 
     if err != nil {
         log.Errorf("Config read error: %s", err)
