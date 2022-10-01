@@ -13,8 +13,6 @@ jobs:
         exclude:
           - goarch: "386"
             goos: darwin
-          - goarch: "arm64"
-            goos: darwin
 
     steps:
     - uses: actions/checkout@v3
@@ -24,7 +22,7 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "1.19"
-        pre_command: "export CGO_ENABLED=0"
+        pre_command: "export CGO_ENABLED=0 && go get -u golang.org/x/sys"
         binary_name: "rogue_mysql_server"
         extra_files: config.yaml README.md
         compress_assets: zip
