@@ -52,8 +52,8 @@ version_string: "10.4.13-MariaDB-log"
 
 file_list: ["/etc/passwd", "C:/boot.ini"]
 save_path: ./loot
-# File that waiting to read. Notice, it doesn't mean you can read all files by once (many mysql libraries don't support this feature).
-# It actually will read one file in the list sequentially while the client send one query.
+# Files that waiting to be read. You need to notice that it doesn't mean you can read all files at once (many mysql libraries don't support this feature).
+# The server will actually read one file in the list sequentially while the client sends one query.
 
 always_read: true
 # If this option is set to true, the rouge server won't check the client's hint of whether it supports LOAD DATA LOCAL, and always try to read the file.
