@@ -1,6 +1,6 @@
 # Rogue Mysql Server
 
-A rouge mysql server based on https://github.com/vitessio/vitess, support common mysql libraries for multiple programming languages.  
+A rouge mysql server based on https://github.com/vitessio/vitess, supports reading files from most mysql libraries of multiple programming languages.  
 No more annoying compatible problems. You can get tested libraries in the following table.
 
 | language | library                        | pass |

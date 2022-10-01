@@ -2,7 +2,7 @@
 
 [English README](./README_EN.md)
 
-基于 https://github.com/vitessio/vitess 实现的恶意 mysql 服务器, 支持 go, php, python, java, 原生命令行等多种语言下的多种库的 mysql 客户端.  
+基于 https://github.com/vitessio/vitess 实现的恶意 mysql 服务器, 支持利用漏洞从 go, php, python, java, 原生命令行等多种语言下的常见 mysql 库中读取文件.  
 远离恼人的兼容性问题, 测试过的客户端见下表
 
 | language | library                        | pass |
