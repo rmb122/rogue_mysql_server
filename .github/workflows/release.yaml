@@ -22,7 +22,7 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "1.19"
-        pre_command: "export CGO_ENABLED=0 && go get -u golang.org/x/sys"
+        pre_command: "export CGO_ENABLED=0"
         binary_name: "rogue_mysql_server"
         extra_files: config.yaml README.md
         compress_assets: zip
