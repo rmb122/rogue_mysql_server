@@ -8,6 +8,7 @@ import (
     "fmt"
     log "github.com/sirupsen/logrus"
     "gopkg.in/yaml.v2"
+    "net"
     "net/url"
     "os"
     "os/exec"
@@ -292,7 +293,12 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
         }
     }
 
-    savePath := fmt.Sprintf("%s/%s", db.config.SavePath, strings.Split(c.RemoteAddr().String(), ":")[0])
+    // fix ipv6 path
+    host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+    if strings.Count(host, ":") >= 2 {
+        host = "[" + strings.ReplaceAll(host, ":", "_") + "]"
+    }
+    savePath := fmt.Sprintf("%s/%s", db.config.SavePath, host)
 
     if _, err := os.Stat(savePath); os.IsNotExist(err) {
         os.MkdirAll(savePath, 0755)
