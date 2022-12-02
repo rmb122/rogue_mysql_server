@@ -1,6 +1,6 @@
 # Rogue Mysql Server
 
-A rouge mysql server based on https://github.com/vitessio/vitess, supports reading files from most mysql libraries of multiple programming languages.  
+A rogue mysql server based on https://github.com/vitessio/vitess, supports reading files from most mysql libraries of multiple programming languages.  
 No more annoying compatible problems. You can get tested libraries in the following table.
 
 | language | library                        | pass |
@@ -29,7 +29,7 @@ Generate the template config file, you can skip this step if you already have it
 ./rogue_mysql_server -generate
 ```
 
-Run rouge mysql server using config.yaml.
+Run rogue mysql server using config.yaml.
 ```sh
 ./rogue_mysql_server
 ```
@@ -56,8 +56,8 @@ save_path: ./loot
 # The server will actually read one file in the list sequentially while the client sends one query.
 
 always_read: true
-# If this option is set to true, the rouge server won't check the client's hint of whether it supports LOAD DATA LOCAL, and always try to read the file.
-# Otherwise, the rouge server will respect the client's hint.
+# If this option is set to true, the rogue server won't check the client's hint of whether it supports LOAD DATA LOCAL, and always try to read the file.
+# Otherwise, the rogue server will respect the client's hint.
 
 from_database_name: false
 # If this option is set to true, the rogue server will get the filename from the database name provided by the client instead of `file_list`.

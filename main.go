@@ -15,6 +15,7 @@ import (
     "path/filepath"
     "regexp"
     "rogue_mysql_server/mysql"
+    "runtime"
     "strings"
     "sync"
     "time"
@@ -115,11 +116,11 @@ func main() {
     }
 
     if *generateConfig {
-        err := os.WriteFile(*configPath, []byte(defaultConfig), 0666)
+        err := os.WriteFile(*configPath, []byte(defaultConfig), 0644)
         if err == nil {
             os.Exit(0)
         } else {
-            log.Errorf("Template config write to %s failed, error: %s", defaultConfigPath, err)
+            log.Errorf("Template config write to %s failed, error: %s", *configPath, err)
             os.Exit(-1)
         }
     }
@@ -295,8 +296,11 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
 
     // fix ipv6 path
     host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
-    if strings.Count(host, ":") >= 2 {
-        host = "[" + strings.ReplaceAll(host, ":", "_") + "]"
+    if strings.Index(host, ":") >= 0 {
+        host = "[" + host + "]"
+        if runtime.GOOS == "windows" {
+            host = strings.ReplaceAll(host, ":", "_")
+        }
     }
     savePath := fmt.Sprintf("%s/%s", db.config.SavePath, host)
 
@@ -305,10 +309,9 @@ func (db *DB) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Resu
     }
 
     sanitizedFilename := sanitizeFilename(filename)
-    sanitizedFilenameArr := strings.Split(sanitizedFilename, "/")
-    saveName := sanitizedFilenameArr[len(sanitizedFilenameArr)-1:]
+    sanitizedFilename = strings.ReplaceAll(sanitizedFilename, "/", "_")
 
-    savePath = fmt.Sprintf("%s/%v_%s", savePath, time.Now().UnixMilli(), saveName[0])
+    savePath = fmt.Sprintf("%s/%v_%s", savePath, time.Now().UnixMilli(), sanitizedFilename)
 
     log.Infof("Now try to read file [%s] from addr [%s], ID [%d]", filename, c.RemoteAddr(), c.ConnectionID)
 
